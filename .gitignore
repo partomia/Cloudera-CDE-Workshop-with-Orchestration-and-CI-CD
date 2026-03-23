@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# GE generated outputs (not committed)
+great_expectations/validations/
+great_expectations/data_docs/
+great_expectations/uncommitted/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store
+
+# Spark local
+derby.log
+metastore_db/
+spark-warehouse/
+
+# Secrets / env
+.env
+*.credentials

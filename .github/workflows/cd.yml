@@ -1,0 +1,44 @@
+name: CD - Deploy to Cloudera CDE
+
+on:
+  push:
+    branches: [main]
+
+env:
+  CDE_VC_ENDPOINT: ${{ secrets.CDE_VC_ENDPOINT }}
+
+jobs:
+  deploy:
+    name: Deploy Jobs & DAG to CDE
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install CDE CLI
+        run: |
+          curl -L "https://github.com/cloudera/cde-cli/releases/latest/download/cde-linux-amd64" \
+            -o /usr/local/bin/cde
+          chmod +x /usr/local/bin/cde
+
+      - name: Configure CDE CLI
+        run: |
+          cde configure \
+            --cdp-endpoint "${{ secrets.CDP_ENDPOINT }}" \
+            --cdp-access-key "${{ secrets.CDP_ACCESS_KEY }}" \
+            --cdp-private-key "${{ secrets.CDP_PRIVATE_KEY }}" \
+            --vcluster-endpoint "${CDE_VC_ENDPOINT}"
+
+      - name: Deploy Spark jobs
+        run: |
+          chmod +x scripts/deploy_jobs.sh
+          ./scripts/deploy_jobs.sh
+
+      - name: Deploy Airflow DAG
+        run: |
+          chmod +x scripts/deploy_dag.sh
+          ./scripts/deploy_dag.sh
+
+      - name: Notify success
+        if: success()
+        run: echo "Deployment to CDE completed successfully on $(date -u)"

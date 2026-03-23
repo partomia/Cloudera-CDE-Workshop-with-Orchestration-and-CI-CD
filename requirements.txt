@@ -1,0 +1,16 @@
+# Dev & local testing dependencies
+pyspark==3.3.2
+great-expectations==0.18.9
+apache-airflow==2.6.3
+boto3>=1.26.0
+pandas>=1.5.0
+pyarrow>=11.0.0
+
+# Testing & linting
+pytest==7.4.0
+pytest-cov==4.1.0
+pylint==3.0.0
+black==23.9.1
+
+# CDE / Airflow providers
+apache-airflow-providers-amazon>=8.0.0

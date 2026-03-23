@@ -1,0 +1,21 @@
+# CDE Resource definitions
+# Each resource bundles files (scripts, configs, requirements) for CDE jobs.
+# Apply via: cde resource create / cde resource upload
+
+resources:
+  - name: workshop-files
+    type: files
+    description: "PySpark job scripts and GE config for the workshop pipeline"
+    files:
+      - jobs/ingest/ingest_raw.py
+      - jobs/validate/validate_data.py
+      - jobs/transform/transform.py
+      - jobs/load/load_curated.py
+      - great_expectations/great_expectations.yml
+      - great_expectations/expectations/retail_raw_suite.json
+      - great_expectations/checkpoints/raw_checkpoint.yml
+
+  - name: workshop-python-env
+    type: python-env
+    description: "Python environment with GE and supporting libraries"
+    pip_requirements_file: resources/requirements.txt

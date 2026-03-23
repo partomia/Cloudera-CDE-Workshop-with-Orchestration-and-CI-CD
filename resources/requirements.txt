@@ -1,0 +1,6 @@
+# Dependencies packaged with CDE Spark jobs
+# Keep minimal - only what Spark jobs need at runtime
+great-expectations==0.18.9
+boto3>=1.26.0
+pandas>=1.5.0
+pyarrow>=11.0.0

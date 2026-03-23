@@ -1,0 +1,31 @@
+name: raw_checkpoint
+config_version: 1.0
+class_name: SimpleCheckpoint
+run_name_template: "%Y%m%d-%H%M%S-workshop-raw-validation"
+
+validations:
+  - batch_request:
+      datasource_name: spark_datasource
+      data_connector_name: runtime_data_connector
+      data_asset_name: raw_orders
+      batch_identifiers:
+        run_id: default
+    expectation_suite_name: retail_raw_suite
+
+action_list:
+  - name: store_validation_result
+    action:
+      class_name: StoreValidationResultAction
+  - name: update_data_docs
+    action:
+      class_name: UpdateDataDocsAction
+      site_names:
+        - local_site
+  - name: notify_on_failure
+    action:
+      class_name: SlackNotificationAction
+      slack_webhook: ${SLACK_WEBHOOK_URL}
+      notify_on: failure
+      renderer:
+        module_name: great_expectations.render.renderer.slack_renderer
+        class_name: SlackRenderer
