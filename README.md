@@ -64,6 +64,64 @@ GitHub Repo
 
 ---
 
+## IDE Setup (IntelliJ / PyCharm)
+
+### 1. Create the `cde-spark` virtual environment
+
+```bash
+python3.11 -m venv ~/venvs/cde-spark
+source ~/venvs/cde-spark/bin/activate
+```
+
+### 2. Install CDE Spark Connect packages
+
+Download the tarballs from **CDE console → Sessions → Spark Connect → Configuration**, then:
+
+```bash
+pip install /path/to/cdeconnect-*.tar.gz
+pip install /path/to/pyspark-3.5.*.tar.gz   # version must match cdeconnect
+```
+
+### 3. Configure CDE CLI
+
+Ensure `~/.cde/config.yaml` has your virtual cluster endpoint:
+
+```yaml
+vcluster-endpoint: https://<your-cde-endpoint>/dex/api/v1
+```
+
+### 4. Register the interpreter in IntelliJ
+
+1. **File → Project Structure → SDKs → `+` → Add Python SDK → Existing environment**
+2. Set path to: `~/venvs/cde-spark/bin/python`
+3. Name it `cde-spark`
+4. **File → Project Structure → Project → SDK**: select `cde-spark`
+
+### 5. Fix run configurations
+
+If you see _"Cannot find Python interpreter for this run configuration"_:
+
+1. **Run → Edit Configurations** → select the affected script
+2. Set **Python interpreter** to **"Project Default (Python 3.11 (cde-spark))"**
+3. Click **Apply → OK**
+
+### 6. Verify the connection
+
+```bash
+source ~/venvs/cde-spark/bin/activate
+python tests/test_cde_connect.py
+```
+
+Expected output:
+```
+Connecting to CDE session: <session-name>
+Spark version  : 3.5.x
+spark.range(10).count() = 10
+SUCCESS: IDE -> CDE Spark Connect session is working.
+```
+
+---
+
 ## Quick Start (Local Dev)
 
 ```bash
