@@ -1,7 +1,8 @@
 """
-Module 4 (cont.) - Load Job
+Module 04 - Load Job
 Reads validated Parquet and writes final curated tables to S3 curated zone.
 Registers tables in Hive Metastore for SQL access in Cloudera.
+Reference solution for: modules/04-load/exercise_load.py
 """
 
 import sys

@@ -35,6 +35,25 @@ Raw CSV file (retail orders)
 
 ---
 
+## Workshop Modules
+
+Each step has a dedicated folder in `modules/` with a README, hands-on exercise file, and hints
+pointing to the reference solution in `jobs/`. Work through them in order.
+
+| Module | Topic | Exercise | Est. Time |
+|--------|-------|----------|-----------|
+| [01 - Explore](modules/01-explore/README.md) | Explore the dataset with PySpark | `exercise_explore.ipynb` | 20 min |
+| [02 - Ingest](modules/02-ingest/README.md) | CSV → Parquet ingest job | `exercise_ingest.py` | 30 min |
+| [03 - Transform](modules/03-transform/README.md) | Clean, enrich, aggregate | `exercise_transform.py` | 45 min |
+| [04 - Load](modules/04-load/README.md) | Curated Parquet + Hive tables | `exercise_load.py` | 30 min |
+| [05 - Data Quality](modules/05-data-quality/README.md) | Great Expectations validation | `exercise_validate.py` | 45 min |
+| [06 - Orchestrate](modules/06-orchestrate/README.md) | Airflow DAG on CDE | `exercise_dag.py` | 40 min |
+| [07 - CI/CD](modules/07-cicd/README.md) | GitHub Actions automation | *(config-based)* | 30 min |
+
+> Stuck on a TODO? The reference solution is always in `jobs/` (modules 02–05) or `dags/` (module 06).
+
+---
+
 ## Prerequisites
 
 Before you begin, make sure you have:
@@ -323,10 +342,18 @@ Automatically deploys to CDE:
 │   └── checkpoints/
 │       └── raw_checkpoint.yml
 ├── jobs/
-│   ├── ingest/ingest_raw.py    # Step 2
-│   ├── transform/transform.py  # Step 3
-│   ├── load/load_curated.py    # Step 4
-│   └── validate/validate_data.py   # Step 5
+│   ├── ingest/ingest_raw.py        # Step 2 — reference solution
+│   ├── transform/transform.py      # Step 3 — reference solution
+│   ├── load/load_curated.py        # Step 4 — reference solution
+│   └── validate/validate_data.py   # Step 5 — reference solution
+├── modules/
+│   ├── 01-explore/             # Dataset exploration
+│   ├── 02-ingest/              # CSV → Parquet exercise
+│   ├── 03-transform/           # Clean, enrich, aggregate exercise
+│   ├── 04-load/                # Curated tables exercise
+│   ├── 05-data-quality/        # Great Expectations exercise
+│   ├── 06-orchestrate/         # Airflow DAG exercise
+│   └── 07-cicd/                # CI/CD walkthrough
 ├── scripts/
 │   ├── deploy_jobs.sh          # CDE job deployment
 │   └── deploy_dag.sh           # CDE DAG deployment

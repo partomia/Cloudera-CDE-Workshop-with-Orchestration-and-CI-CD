@@ -1,6 +1,7 @@
 """
-Module 2 - Ingest Job
+Module 02 - Ingest Job
 Reads raw retail orders CSV from S3 landing zone and writes Parquet to S3 raw zone.
+Reference solution for: modules/02-ingest/exercise_ingest.py
 """
 
 import sys

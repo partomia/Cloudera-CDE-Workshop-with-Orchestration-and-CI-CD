@@ -1,7 +1,8 @@
 """
-Module 3 - Validate Job
+Module 05 - Validate Job
 Runs Great Expectations checkpoint on raw Parquet data.
 Exits with code 1 if any expectation fails — Airflow marks the task FAILED.
+Reference solution for: modules/05-data-quality/exercise_validate.py
 """
 
 import sys

@@ -1,10 +1,11 @@
 """
-Module 4 - Transform Job
+Module 03 - Transform Job
 Applies ELT business logic to raw Parquet:
   - Clean nulls and type-cast columns
   - Derive new columns (revenue, order_month)
   - Aggregate by customer and product category
 Writes transformed Parquet to S3 validated zone.
+Reference solution for: modules/03-transform/exercise_transform.py
 """
 
 import sys
