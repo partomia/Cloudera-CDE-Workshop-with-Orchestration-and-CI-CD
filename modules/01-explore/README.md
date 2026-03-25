@@ -2,7 +2,7 @@
 
 **Estimated time:** 20 minutes
 **Prerequisite:** Environment setup complete (root README, sections 1–6)
-**Exercise file:** `exercise_explore.ipynb`
+**Demo file:** `demos/demo_explore.py`
 
 ---
 
@@ -48,11 +48,9 @@ When you call `SparkSession.builder.getOrCreate()` using the `cde-spark` environ
 
 ## Steps
 
-1. Open `modules/01-explore/exercise_explore.ipynb` in IntelliJ
-2. Select the **`cde-spark`** kernel (top-right of the notebook)
-3. Run **Cell 1** — it creates the SparkSession; confirm you see `Connected to Spark 3.5.x`
-4. Complete each **TODO** cell in order using the hints provided
-5. Answer the **Reflection Questions** at the end of the notebook as text in the final cell
+1. Open `demos/demo_explore.py` in IntelliJ
+2. Set `CDE_SESSION_NAME` at the top of the file to your session name
+3. Press **Play** — the script connects to CDE and prints results for each exploration step
 
 ---
 
