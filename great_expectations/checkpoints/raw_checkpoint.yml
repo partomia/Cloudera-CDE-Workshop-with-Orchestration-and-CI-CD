@@ -21,11 +21,3 @@ action_list:
       class_name: UpdateDataDocsAction
       site_names:
         - local_site
-  - name: notify_on_failure
-    action:
-      class_name: SlackNotificationAction
-      slack_webhook: ${SLACK_WEBHOOK_URL}
-      notify_on: failure
-      renderer:
-        module_name: great_expectations.render.renderer.slack_renderer
-        class_name: SlackRenderer

@@ -1,14 +1,28 @@
 # Great Expectations project config
-# Module 3 - Data Quality
 
 config_version: 3.0
 
 datasources:
+  # Used by CDE Spark jobs (jobs/validate/validate_data.py)
   spark_datasource:
     class_name: Datasource
     module_name: great_expectations.datasource
     execution_engine:
       class_name: SparkDFExecutionEngine
+      module_name: great_expectations.execution_engine
+    data_connectors:
+      runtime_data_connector:
+        class_name: RuntimeDataConnector
+        module_name: great_expectations.datasource.data_connector
+        batch_identifiers:
+          - run_id
+
+  # Used by the local demo (demos/demo_data_quality.py) and CI pipeline
+  pandas_datasource:
+    class_name: Datasource
+    module_name: great_expectations.datasource
+    execution_engine:
+      class_name: PandasExecutionEngine
       module_name: great_expectations.execution_engine
     data_connectors:
       runtime_data_connector:

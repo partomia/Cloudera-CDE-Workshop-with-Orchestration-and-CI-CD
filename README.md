@@ -1,8 +1,30 @@
-# Spark Workshop: PySpark + Great Expectations + Airflow on Cloudera CDE
+# Data Engineering POC: PySpark + Great Expectations + Airflow on Cloudera CDE
 
-This is a hands-on data engineering workshop. You will take a raw CSV file of retail orders,
-process it through a full ELT pipeline on Cloudera Data Engineering (CDE), validate data quality,
-and automate everything with Airflow and GitHub Actions.
+This is a functionality proof-of-concept demonstrating five capabilities working end-to-end
+on Cloudera Data Engineering (CDE):
+
+1. **IDE ↔ CDE Spark Connect** — run PySpark from IntelliJ directly on a live CDE session
+2. **Git Integration** — CDE pulls jobs directly from this GitHub repo
+3. **Data Quality** — Great Expectations validates data and generates an HTML report
+4. **Airflow Orchestration** — a DAG sequences all pipeline steps on CDE
+5. **CI/CD** — GitHub Actions runs quality gates on every PR and deploys on merge to `main`
+
+---
+
+## Quick Start — Run the Demos
+
+> Prerequisites: environment set up (see below). Each script runs with one click — no arguments needed.
+
+| Script | What it shows |
+|--------|--------------|
+| `tests/test_cde_connect.py` | IDE → CDE session connection smoke test |
+| `demos/demo_etl.py` | Full ELT pipeline on inline data: raw → clean → enrich → aggregate |
+| `demos/demo_data_quality.py` | GE validation: clean data passes, dirty data fails with report |
+
+Set your session name in each demo file (one line at the top):
+```python
+CDE_SESSION_NAME = "your-session-name"
+```
 
 ---
 
