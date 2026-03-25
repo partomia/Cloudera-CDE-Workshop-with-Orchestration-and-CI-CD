@@ -20,6 +20,7 @@ on Cloudera Data Engineering (CDE):
 | `tests/test_cde_connect.py` | IDE → CDE session connection smoke test |
 | `demos/demo_etl.py` | Full ELT pipeline on inline data: raw → clean → enrich → aggregate |
 | `demos/demo_data_quality.py` | GE validation: clean data passes, dirty data fails with report |
+| `demos/demo_airflow.py` | Deployed CDE jobs, DAG status, recent run history with task-level pass/fail |
 
 Set your session name in each demo file (one line at the top):
 ```python
