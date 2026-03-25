@@ -39,6 +39,20 @@ Parquet is a columnar format. Unlike CSV it stores data type information, suppor
 **Audit columns**
 `_ingested_at` and `_source_file` are added to every row so you can always trace where a record came from and when it was loaded. This is standard practice in data engineering.
 
+These are added with `selectExpr` using built-in SQL functions:
+```python
+df = df.selectExpr(
+    "*",
+    "current_timestamp() AS _ingested_at",
+    "input_file_name()   AS _source_file",
+)
+```
+> **Why `selectExpr` instead of `withColumn` + imported functions?**
+> The `pyspark.sql.functions` module (e.g. `current_timestamp()`, `F.col()`) routes calls
+> through the JVM bridge, which requires a local `SparkContext`. Spark Connect — used when
+> your IDE talks to CDE — has no local JVM. SQL strings passed via `selectExpr` or
+> `spark.sql()` are evaluated server-side and work correctly on Connect.
+
 **`mode("overwrite")`**
 Makes the job re-runnable. If the job fails halfway and is re-run, it replaces the previous partial output cleanly. Without this, Spark would throw an error if the output path already exists.
 

@@ -116,6 +116,19 @@ pip install /path/to/pyspark-3.5.*.tar.gz   # version must match cdeconnect
 pip install -r requirements.txt
 ```
 
+> **Spark Connect compatibility note:** The PySpark version bundled with CDE uses the classic
+> JVM-bridge implementation of `pyspark.sql.functions` (`F.col()`, `F.sum()`, etc.), which
+> requires a local `SparkContext`. Spark Connect has no local JVM, so those calls raise:
+> `AssertionError: SparkContext._active_spark_context is not None`.
+>
+> All code in this project uses Spark Connect-safe patterns instead:
+> - `selectExpr("CAST(qty AS INT) AS qty", "UPPER(TRIM(cat)) AS cat", ...)` — for column transforms
+> - `df.sparkSession.sql("SELECT SUM(...) ...")` with `createOrReplaceTempView` — for aggregations
+> - `df.filter("qty > 0")` — string predicates for filtering
+> - `df["colname"]` — subscript notation for column references
+>
+> These patterns work identically on both Spark Connect (IDE → CDE) and classic Spark (unit tests, CDE jobs).
+
 ### 4. Configure the CDE CLI
 
 Ensure `~/.cde/config.yaml` has your virtual cluster endpoint:

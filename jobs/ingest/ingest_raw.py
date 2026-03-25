@@ -7,7 +7,6 @@ Reference solution for: modules/02-ingest/exercise_ingest.py
 import sys
 import logging
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import current_timestamp, input_file_name
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,10 +35,10 @@ def ingest(spark: SparkSession, landing_path: str, raw_path: str) -> int:
         .csv(landing_path)
     )
 
-    df = (
-        df
-        .withColumn("_ingested_at", current_timestamp())
-        .withColumn("_source_file", input_file_name())
+    df = df.selectExpr(
+        "*",
+        "current_timestamp() AS _ingested_at",
+        "input_file_name()   AS _source_file",
     )
 
     count = df.count()

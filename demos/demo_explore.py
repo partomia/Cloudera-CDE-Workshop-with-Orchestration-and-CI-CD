@@ -14,7 +14,6 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cde import CDESparkConnectSession
-from pyspark.sql import functions as F
 
 from demos.sample_data import ORDERS, SCHEMA
 
@@ -51,19 +50,13 @@ try:
     df.select("quantity", "unit_price").describe().show()
 
     sep("5 — NULL COUNTS PER COLUMN")
-    df.select([
-        F.sum(F.col(c).isNull().cast("int")).alias(c)
-        for c in df.columns
-    ]).show()
+    df.selectExpr([f"sum(int({c} is null)) as {c}" for c in df.columns]).show()
 
     sep("6 — ORDER COUNT BY CATEGORY")
-    df.groupBy("category").count().orderBy(F.col("count").desc()).show(truncate=False)
+    df.groupBy("category").count().orderBy("count", ascending=False).show(truncate=False)
 
     sep("7 — DATE RANGE")
-    df.agg(
-        F.min("order_date").alias("earliest"),
-        F.max("order_date").alias("latest")
-    ).show()
+    df.selectExpr("min(order_date) as earliest", "max(order_date) as latest").show()
 
     print("\n✓  Exploration complete.\n")
 

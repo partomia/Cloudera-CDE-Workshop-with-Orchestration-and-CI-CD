@@ -15,8 +15,6 @@ Reference solution: jobs/transform/transform.py
 import sys
 import logging
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql import functions as F
-from pyspark.sql.types import DoubleType, IntegerType
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,21 +30,21 @@ def clean(df: DataFrame) -> DataFrame:
     # TODO 1: Drop rows where any of these columns is null:
     #         order_id, customer_id, product_id
     # Hint: df.dropna(subset=["order_id", "customer_id", "product_id"])
-    df = raise NotImplementedError
+    raise NotImplementedError
 
-    # TODO 2: Cast 'quantity' to IntegerType and 'unit_price' to DoubleType
-    # Hint: df.withColumn("quantity", F.col("quantity").cast(IntegerType()))
-    #         .withColumn("unit_price", F.col("unit_price").cast(DoubleType()))
-    df = raise NotImplementedError
-
-    # TODO 3: Standardise 'category' — convert to UPPERCASE and strip whitespace
-    # Hint: F.upper(F.trim(F.col("category")))
-    df = raise NotImplementedError
-
-    # TODO 4: Filter out rows where quantity <= 0 or unit_price <= 0
-    # These are data errors — negative or zero values are not valid orders
-    # Hint: df.filter(F.col("quantity") > 0).filter(F.col("unit_price") > 0)
-    df = raise NotImplementedError
+    # TODO 2–4: Use selectExpr to cast types and standardise category in one step,
+    # then filter out invalid rows.
+    #
+    # selectExpr lets you write SQL expressions as strings — safe on Spark Connect.
+    #
+    # Hint:
+    #   df = df.selectExpr(
+    #       "order_id", "customer_id", "product_id", "order_date",
+    #       "CAST(quantity   AS INT)    AS quantity",
+    #       "CAST(unit_price AS DOUBLE) AS unit_price",
+    #       "UPPER(TRIM(category))      AS category",
+    #   ).filter("quantity > 0").filter("unit_price > 0")
+    raise NotImplementedError
 
     return df
 
@@ -54,49 +52,58 @@ def clean(df: DataFrame) -> DataFrame:
 def enrich(df: DataFrame) -> DataFrame:
     """Derive revenue and time-based columns."""
 
-    # TODO 5: Add 'revenue' = quantity × unit_price
-    # Hint: F.col("quantity") * F.col("unit_price")
-    df = raise NotImplementedError
-
-    # TODO 6: Add 'order_month' formatted as "yyyy-MM" (e.g. "2026-01")
-    # Hint: F.date_format(F.col("order_date"), "yyyy-MM")
-    df = raise NotImplementedError
-
-    # TODO 7: Add 'order_year' as an integer (e.g. 2026)
-    # Hint: F.year(F.col("order_date"))
-    df = raise NotImplementedError
-
-    return df
+    # TODO 5–7: Add revenue, order_month, and order_year using selectExpr.
+    #
+    # selectExpr("*", ...) keeps all existing columns and appends new ones.
+    #
+    # Hint:
+    #   return df.selectExpr(
+    #       "*",
+    #       "quantity * unit_price                AS revenue",
+    #       "date_format(order_date, 'yyyy-MM')   AS order_month",
+    #       "year(order_date)                     AS order_year",
+    #   )
+    raise NotImplementedError
 
 
 def aggregate_by_customer(df: DataFrame) -> DataFrame:
     """Monthly revenue per customer."""
 
-    # TODO 8: Group by customer_id and order_month
+    # TODO 8: Group by customer_id and order_month using spark.sql().
+    #
+    # Register df as a temp view, then query it with SQL.
+    # spark.sql() and createOrReplaceTempView() both work on Spark Connect.
+    #
     # Compute:
-    #   total_revenue  — sum of revenue
-    #   order_count    — count of distinct order_ids
-    #   total_quantity — sum of quantity
+    #   total_revenue  — SUM(revenue)
+    #   order_count    — COUNT(DISTINCT order_id)
+    #   total_quantity — SUM(quantity)
     #
     # Hint:
-    #   df.groupBy("customer_id", "order_month").agg(
-    #       F.sum("revenue").alias("total_revenue"),
-    #       F.countDistinct("order_id").alias("order_count"),
-    #       F.sum("quantity").alias("total_quantity"),
-    #   )
+    #   spark = df.sparkSession
+    #   df.createOrReplaceTempView("_agg_cust")
+    #   return spark.sql("""
+    #       SELECT  customer_id, order_month,
+    #               SUM(revenue)             AS total_revenue,
+    #               COUNT(DISTINCT order_id) AS order_count,
+    #               SUM(quantity)            AS total_quantity
+    #       FROM    _agg_cust
+    #       GROUP BY customer_id, order_month
+    #   """)
     raise NotImplementedError
 
 
 def aggregate_by_category(df: DataFrame) -> DataFrame:
     """Monthly revenue per product category."""
 
-    # TODO 9: Group by category and order_month
-    # Compute:
-    #   total_revenue   — sum of revenue
-    #   order_count     — count of distinct order_ids
-    #   avg_unit_price  — average of unit_price
+    # TODO 9: Group by category and order_month using spark.sql().
     #
-    # Hint: same pattern as aggregate_by_customer above
+    # Same pattern as aggregate_by_customer above.
+    #
+    # Compute:
+    #   total_revenue   — SUM(revenue)
+    #   order_count     — COUNT(DISTINCT order_id)
+    #   avg_unit_price  — AVG(unit_price)
     raise NotImplementedError
 
 

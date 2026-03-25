@@ -11,8 +11,6 @@ Reference solution for: modules/03-transform/exercise_transform.py
 import sys
 import logging
 from pyspark.sql import SparkSession, DataFrame
-from pyspark.sql import functions as F
-from pyspark.sql.types import DoubleType, IntegerType
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,48 +27,56 @@ def get_spark() -> SparkSession:
 def clean(df: DataFrame) -> DataFrame:
     """Drop rows with null keys, cast types, standardise strings."""
     return (
-        df
-        .dropna(subset=["order_id", "customer_id", "product_id"])
-        .withColumn("quantity", F.col("quantity").cast(IntegerType()))
-        .withColumn("unit_price", F.col("unit_price").cast(DoubleType()))
-        .withColumn("category", F.upper(F.trim(F.col("category"))))
-        .filter(F.col("quantity") > 0)
-        .filter(F.col("unit_price") > 0)
+        df.dropna(subset=["order_id", "customer_id", "product_id"])
+        .selectExpr(
+            "order_id", "customer_id", "product_id", "order_date",
+            "CAST(quantity   AS INT)    AS quantity",
+            "CAST(unit_price AS DOUBLE) AS unit_price",
+            "UPPER(TRIM(category))      AS category",
+        )
+        .filter("quantity > 0")
+        .filter("unit_price > 0")
     )
 
 
 def enrich(df: DataFrame) -> DataFrame:
     """Derive revenue and time-based columns."""
-    return (
-        df
-        .withColumn("revenue", F.col("quantity") * F.col("unit_price"))
-        .withColumn("order_month", F.date_format(F.col("order_date"), "yyyy-MM"))
-        .withColumn("order_year", F.year(F.col("order_date")))
+    return df.selectExpr(
+        "*",
+        "quantity * unit_price                AS revenue",
+        "date_format(order_date, 'yyyy-MM')   AS order_month",
+        "year(order_date)                     AS order_year",
     )
 
 
 def aggregate_by_customer(df: DataFrame) -> DataFrame:
     """Monthly revenue per customer."""
-    return (
-        df.groupBy("customer_id", "order_month")
-        .agg(
-            F.sum("revenue").alias("total_revenue"),
-            F.countDistinct("order_id").alias("order_count"),
-            F.sum("quantity").alias("total_quantity"),
-        )
-    )
+    spark = df.sparkSession
+    df.createOrReplaceTempView("_agg_cust")
+    return spark.sql("""
+        SELECT  customer_id,
+                order_month,
+                SUM(revenue)             AS total_revenue,
+                COUNT(DISTINCT order_id) AS order_count,
+                SUM(quantity)            AS total_quantity
+        FROM    _agg_cust
+        GROUP BY customer_id, order_month
+    """)
 
 
 def aggregate_by_category(df: DataFrame) -> DataFrame:
     """Monthly revenue per product category."""
-    return (
-        df.groupBy("category", "order_month")
-        .agg(
-            F.sum("revenue").alias("total_revenue"),
-            F.countDistinct("order_id").alias("order_count"),
-            F.avg("unit_price").alias("avg_unit_price"),
-        )
-    )
+    spark = df.sparkSession
+    df.createOrReplaceTempView("_agg_cat")
+    return spark.sql("""
+        SELECT  category,
+                order_month,
+                SUM(revenue)             AS total_revenue,
+                COUNT(DISTINCT order_id) AS order_count,
+                AVG(unit_price)          AS avg_unit_price
+        FROM    _agg_cat
+        GROUP BY category, order_month
+    """)
 
 
 def transform(spark: SparkSession, raw_path: str, validated_path: str):

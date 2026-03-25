@@ -12,7 +12,6 @@ Reference solution: jobs/ingest/ingest_raw.py
 import sys
 import logging
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import current_timestamp, input_file_name
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -47,19 +46,22 @@ def ingest(spark: SparkSession, landing_path: str, raw_path: str) -> int:
     #              .option("inferSchema", "true") \
     #              .option("multiLine", "true") \
     #              .csv(landing_path)
-    df = raise NotImplementedError
+    raise NotImplementedError
 
-    # TODO 3: Add two audit columns to df
+    # TODO 3: Add two audit columns to df using selectExpr
     #
     #   "_ingested_at"  — the timestamp when this job ran
-    #                     Hint: current_timestamp()  (already imported above)
+    #                     SQL function: current_timestamp()
     #
     #   "_source_file"  — the full S3 path of the source file
-    #                     Hint: input_file_name()  (already imported above)
+    #                     SQL function: input_file_name()
     #
-    # Hint: df = df.withColumn("_ingested_at", current_timestamp()) \
-    #               .withColumn("_source_file", input_file_name())
-    df = raise NotImplementedError
+    # Hint: df = df.selectExpr(
+    #               "*",
+    #               "current_timestamp() AS _ingested_at",
+    #               "input_file_name()   AS _source_file",
+    #           )
+    raise NotImplementedError
 
     count = df.count()
     logger.info("Ingested %d records", count)

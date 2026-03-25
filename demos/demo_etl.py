@@ -16,8 +16,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from cde import CDESparkConnectSession
 from pyspark.sql import DataFrame
-from pyspark.sql import functions as F
-from pyspark.sql.types import IntegerType, DoubleType
 
 from demos.sample_data import ORDERS, SCHEMA
 
@@ -35,47 +33,55 @@ def sep(title):
 
 def clean(df: DataFrame) -> DataFrame:
     return (
-        df
-        .dropna(subset=["order_id", "customer_id", "product_id"])
-        .withColumn("quantity",  F.col("quantity").cast(IntegerType()))
-        .withColumn("unit_price", F.col("unit_price").cast(DoubleType()))
-        .withColumn("category",  F.upper(F.trim(F.col("category"))))
-        .filter(F.col("quantity") > 0)
-        .filter(F.col("unit_price") > 0)
+        df.dropna(subset=["order_id", "customer_id", "product_id"])
+        .selectExpr(
+            "order_id", "customer_id", "product_id", "order_date",
+            "CAST(quantity   AS INT)    AS quantity",
+            "CAST(unit_price AS DOUBLE) AS unit_price",
+            "UPPER(TRIM(category))      AS category",
+        )
+        .filter("quantity > 0")
+        .filter("unit_price > 0")
     )
 
 
 def enrich(df: DataFrame) -> DataFrame:
-    return (
-        df
-        .withColumn("revenue",     F.col("quantity") * F.col("unit_price"))
-        .withColumn("order_month", F.date_format(F.col("order_date"), "yyyy-MM"))
-        .withColumn("order_year",  F.year(F.col("order_date")))
+    return df.selectExpr(
+        "*",
+        "quantity * unit_price                AS revenue",
+        "date_format(order_date, 'yyyy-MM')   AS order_month",
+        "year(order_date)                     AS order_year",
     )
 
 
 def aggregate_by_category(df: DataFrame) -> DataFrame:
-    return (
-        df.groupBy("category", "order_month")
-        .agg(
-            F.sum("revenue").alias("total_revenue"),
-            F.countDistinct("order_id").alias("order_count"),
-            F.avg("unit_price").alias("avg_unit_price"),
-        )
-        .orderBy(F.col("total_revenue").desc())
-    )
+    spark = df.sparkSession
+    df.createOrReplaceTempView("_agg_cat")
+    return spark.sql("""
+        SELECT  category,
+                order_month,
+                SUM(revenue)             AS total_revenue,
+                COUNT(DISTINCT order_id) AS order_count,
+                AVG(unit_price)          AS avg_unit_price
+        FROM    _agg_cat
+        GROUP BY category, order_month
+        ORDER BY total_revenue DESC
+    """)
 
 
 def aggregate_by_customer(df: DataFrame) -> DataFrame:
-    return (
-        df.groupBy("customer_id", "order_month")
-        .agg(
-            F.sum("revenue").alias("total_revenue"),
-            F.countDistinct("order_id").alias("order_count"),
-            F.sum("quantity").alias("total_quantity"),
-        )
-        .orderBy(F.col("total_revenue").desc())
-    )
+    spark = df.sparkSession
+    df.createOrReplaceTempView("_agg_cust")
+    return spark.sql("""
+        SELECT  customer_id,
+                order_month,
+                SUM(revenue)             AS total_revenue,
+                COUNT(DISTINCT order_id) AS order_count,
+                SUM(quantity)            AS total_quantity
+        FROM    _agg_cust
+        GROUP BY customer_id, order_month
+        ORDER BY total_revenue DESC
+    """)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────

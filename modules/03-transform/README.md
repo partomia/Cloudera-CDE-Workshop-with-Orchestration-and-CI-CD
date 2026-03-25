@@ -12,9 +12,9 @@
 By the end of this module you will be able to:
 
 - Apply a three-stage transformation pattern: clean → enrich → aggregate
-- Use `dropna`, type casting, `F.upper`, `F.trim`, and filter predicates
-- Derive computed columns (`revenue`, `order_month`, `order_year`)
-- Produce two aggregation datasets grouped by different business dimensions
+- Use `dropna`, `selectExpr` for type casting and string standardisation, and string filter predicates
+- Derive computed columns (`revenue`, `order_month`, `order_year`) via `selectExpr`
+- Produce two aggregation datasets grouped by different business dimensions using `spark.sql()`
 - Write multiple output datasets to S3 with appropriate partition keys
 
 ---
@@ -32,14 +32,39 @@ By the end of this module you will be able to:
 **Null-safe operations**
 `dropna(subset=["order_id"])` removes rows where `order_id` is null. This is safer than filtering because it handles all null representations at once.
 
-**Type casting**
-`F.col("quantity").cast(IntegerType())` converts the column to the correct type. If a value cannot be cast (e.g. the string "abc"), Spark returns `null` rather than throwing an error.
+**Type casting and string standardisation with `selectExpr`**
+`selectExpr` lets you write SQL expressions as strings, which are evaluated server-side — fully compatible with Spark Connect:
+```python
+df = df.selectExpr(
+    "order_id", "customer_id", "product_id", "order_date",
+    "CAST(quantity   AS INT)    AS quantity",
+    "CAST(unit_price AS DOUBLE) AS unit_price",
+    "UPPER(TRIM(category))      AS category",
+)
+```
+If a value cannot be cast (e.g. the string "abc"), Spark returns `null` rather than throwing an error.
+
+> **Why not `F.col()` / `F.upper()` etc.?**
+> `pyspark.sql.functions` routes calls through the JVM bridge, which requires a local
+> `SparkContext`. Spark Connect (IDE → CDE) has no local JVM. Use `selectExpr` or
+> `spark.sql()` instead — both send SQL strings to the server for evaluation.
 
 **Immutability**
-Every PySpark transformation returns a **new** DataFrame. The original is never modified. This is why you write `df = df.withColumn(...)` — you are re-assigning the variable to a new DataFrame.
+Every PySpark transformation returns a **new** DataFrame. The original is never modified. This is why you write `df = df.selectExpr(...)` — you are re-assigning the variable to a new DataFrame.
 
-**`groupBy().agg()`**
-You can compute multiple aggregations in a single pass by passing several expressions to `.agg()`. This is more efficient than calling `.groupBy().agg()` separately for each metric.
+**Aggregations with `spark.sql()`**
+Register a temp view, then use `spark.sql()` for aggregations. This works on both local Spark and Spark Connect:
+```python
+df.createOrReplaceTempView("_agg_cat")
+result = df.sparkSession.sql("""
+    SELECT  category, order_month,
+            SUM(revenue)             AS total_revenue,
+            COUNT(DISTINCT order_id) AS order_count,
+            AVG(unit_price)          AS avg_unit_price
+    FROM    _agg_cat
+    GROUP BY category, order_month
+""")
+```
 
 **Partition strategy**
 - Order-level data is partitioned by `order_year` + `order_month` — coarse enough to avoid too many small files, fine enough to allow efficient date filtering
