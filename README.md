@@ -99,15 +99,25 @@ vcluster-endpoint: https://<your-cde-endpoint>/dex/api/v1
 
 Your instructor will give you this URL.
 
-### Step 5 — Point IntelliJ at the right interpreter
+### Step 5 — Register the Python interpreter in IntelliJ
+
+The project is pre-configured (`.idea/modules.xml` + `.idea/Spark-Workshop-Airflow-Git.iml`)
+to use an SDK named **`Python 3.11 (cde-spark)`**. IntelliJ just needs to know where that
+interpreter lives on your machine:
 
 1. **File → Project Structure → SDKs → `+` → Add Python SDK → Existing environment**
-2. Path: `~/venvs/cde-spark/bin/python` — name it `cde-spark`
-3. **File → Project Structure → Project → SDK** → select `cde-spark`
-4. **Run → Edit Configurations** → Python interpreter → `Project Default (cde-spark)`
+2. Path: `~/venvs/cde-spark/bin/python`
+3. Name it exactly **`Python 3.11 (cde-spark)`** (must match)
+4. Click **OK / Apply** — IntelliJ will index the environment and the red
+   _"No Python interpreter"_ banner will disappear automatically
 
-> **Troubleshooting:** _"Cannot find Python interpreter"_ means the run config has a stale
-> override. Repeat step 4 above for that specific run config.
+> **Why does this work?** The `.iml` file tells IntelliJ to look for an SDK named
+> `Python 3.11 (cde-spark)`. Once you register it once, all run configurations inherit it.
+> You never need to set it per-file again.
+
+> **Troubleshooting:** If you still see _"Cannot find Python interpreter"_ after adding the SDK,
+> go to **File → Project Structure → Project** and confirm the **Project SDK** dropdown shows
+> `Python 3.11 (cde-spark)`. If it shows `<No SDK>`, select it from the dropdown.
 
 ### Step 6 — Verify your connection
 
