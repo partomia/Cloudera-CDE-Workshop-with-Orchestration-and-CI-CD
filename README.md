@@ -261,7 +261,7 @@ SELECT * FROM workshop_db.category_summary ORDER BY total_revenue DESC;
 
 **File:** `dags/etl_pipeline_dag.py`
 
-The DAG runs all four jobs in sequence, daily at 06:00 UTC:
+The DAG runs all four jobs in sequence and starts automatically (unpaused on creation):
 
 ```
 ingest_raw  →  validate_data  →  transform  →  load_curated
@@ -269,18 +269,22 @@ ingest_raw  →  validate_data  →  transform  →  load_curated
 
 If any job fails (e.g. a data quality check), the pipeline stops immediately — preventing bad data from reaching the curated zone.
 
-**Set Airflow Variables before triggering:**
+**Schedule:** Every 5 minutes (`*/5 * * * *`). No manual trigger needed — the DAG starts running as soon as it is deployed.
+
+**Set Airflow Variables before deploying:**
 ```bash
 airflow variables set S3_BUCKET     "s3://your-bucket"
 airflow variables set HIVE_DATABASE "workshop_db"
 airflow variables set GE_ROOT_DIR   "/app/mount/great_expectations"
 ```
 
-**Deploy and trigger:**
+**Deploy:**
 ```bash
 ./scripts/deploy_dag.sh
-# Then: CDE Airflow UI → DAGs → retail_etl_pipeline → Trigger DAG
+# DAG starts automatically — visible in CDE Airflow UI → DAGs → retail_etl_pipeline
 ```
+
+> **Note:** The deploy scripts can be run from any directory — they resolve all paths relative to the repo root automatically.
 
 ---
 
