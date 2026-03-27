@@ -8,8 +8,9 @@
 
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DAG_RESOURCE="workshop-dags"
-DAG_FILE="dags/etl_pipeline_dag.py"
+DAG_FILE="${REPO_ROOT}/dags/etl_pipeline_dag.py"
 
 echo "==> Creating/updating DAG resource: ${DAG_RESOURCE}"
 cde resource create --name "${DAG_RESOURCE}" --type files 2>/dev/null || true

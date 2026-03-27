@@ -8,6 +8,7 @@
 
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RESOURCE_NAME="workshop-files"
 PYTHON_ENV="workshop-python-env"
 
@@ -16,21 +17,21 @@ cde resource create --name "${RESOURCE_NAME}" --type files 2>/dev/null || true
 
 echo "==> Uploading job scripts"
 cde resource upload --name "${RESOURCE_NAME}" \
-  --local-path jobs/ingest/ingest_raw.py \
-  --local-path jobs/validate/validate_data.py \
-  --local-path jobs/transform/transform.py \
-  --local-path jobs/load/load_curated.py
+  --local-path "${REPO_ROOT}/jobs/ingest/ingest_raw.py" \
+  --local-path "${REPO_ROOT}/jobs/validate/validate_data.py" \
+  --local-path "${REPO_ROOT}/jobs/transform/transform.py" \
+  --local-path "${REPO_ROOT}/jobs/load/load_curated.py"
 
 echo "==> Uploading GE config"
 cde resource upload --name "${RESOURCE_NAME}" \
-  --local-path great_expectations/great_expectations.yml \
-  --local-path great_expectations/expectations/retail_raw_suite.json \
-  --local-path great_expectations/checkpoints/raw_checkpoint.yml
+  --local-path "${REPO_ROOT}/great_expectations/great_expectations.yml" \
+  --local-path "${REPO_ROOT}/great_expectations/expectations/retail_raw_suite.json" \
+  --local-path "${REPO_ROOT}/great_expectations/checkpoints/raw_checkpoint.yml"
 
 echo "==> Creating/updating Python environment resource: ${PYTHON_ENV}"
 cde resource create --name "${PYTHON_ENV}" --type python-env 2>/dev/null || true
 cde resource upload --name "${PYTHON_ENV}" \
-  --local-path resources/requirements.txt
+  --local-path "${REPO_ROOT}/resources/requirements.txt"
 
 # ── CDE Job definitions ───────────────────────────────────────────────────────
 
