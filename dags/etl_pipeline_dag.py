@@ -43,7 +43,7 @@ with DAG(
     dag_id="retail_etl_pipeline",
     description="Retail ELT pipeline: ingest → validate → transform → load",
     default_args=default_args,
-    schedule_interval="0 6 * * *",     # Daily at 06:00 UTC
+    schedule_interval=None,             # Manual trigger only
     start_date=datetime(2026, 1, 1),
     catchup=False,
     tags=["workshop", "pyspark", "great-expectations"],
