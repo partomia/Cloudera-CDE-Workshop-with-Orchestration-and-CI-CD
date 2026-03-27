@@ -1,6 +1,12 @@
-# Dependencies packaged with CDE Spark jobs
-# Keep minimal - only what Spark jobs need at runtime
-great-expectations==0.18.9
+# Runtime dependencies for CDE Spark jobs
+# Keep minimal — CDE Python env builder has limited build time
+# great-expectations pulls 50+ transitive deps and causes build timeouts;
+# install only the core packages needed by jobs/validate/validate_data.py
+
+great-expectations==0.18.9 --no-deps
+typing-extensions>=4.0.0
+ruamel.yaml>=0.16.0
+colorama>=0.4.0
 boto3>=1.26.0
 pandas>=1.5.0
 pyarrow>=11.0.0
