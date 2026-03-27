@@ -41,7 +41,7 @@ def load(spark: SparkSession, validated_path: str, curated_path: str, database: 
 
         # TODO 3: Read the validated Parquet for this table
         # Hint: spark.read.parquet(src)
-        df = raise NotImplementedError
+        raise NotImplementedError
 
         # TODO 4: Write df to the curated S3 zone
         # Requirements: mode="overwrite", format=parquet
