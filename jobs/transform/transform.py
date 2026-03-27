@@ -4,7 +4,9 @@ Applies ELT business logic to raw Parquet:
   - Clean nulls and type-cast columns
   - Derive new columns (revenue, order_month)
   - Aggregate by customer and product category
-Writes transformed Parquet to S3 validated zone.
+Writes transformed Parquet to validated zone (S3 or local CDE storage).
+If no paths provided, reads from and writes to default local CDE paths.
+
 Reference solution for: modules/03-transform/exercise_transform.py
 """
 
@@ -15,13 +17,16 @@ from pyspark.sql import SparkSession, DataFrame
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_RAW_PATH       = "/tmp/workshop/raw"
+DEFAULT_VALIDATED_PATH = "/tmp/workshop/validated"
+
+
+def _is_unset(val: str) -> bool:
+    return not val or (val.startswith("{{") and val.endswith("}}"))
+
 
 def get_spark() -> SparkSession:
-    return (
-        SparkSession.builder
-        .appName("workshop-transform")
-        .getOrCreate()
-    )
+    return SparkSession.builder.appName("workshop-transform").getOrCreate()
 
 
 def clean(df: DataFrame) -> DataFrame:
@@ -50,7 +55,6 @@ def enrich(df: DataFrame) -> DataFrame:
 
 
 def aggregate_by_customer(df: DataFrame) -> DataFrame:
-    """Monthly revenue per customer."""
     spark = df.sparkSession
     df.createOrReplaceTempView("_agg_cust")
     return spark.sql("""
@@ -65,7 +69,6 @@ def aggregate_by_customer(df: DataFrame) -> DataFrame:
 
 
 def aggregate_by_category(df: DataFrame) -> DataFrame:
-    """Monthly revenue per product category."""
     spark = df.sparkSession
     df.createOrReplaceTempView("_agg_cat")
     return spark.sql("""
@@ -83,49 +86,35 @@ def transform(spark: SparkSession, raw_path: str, validated_path: str):
     logger.info("Reading raw data from: %s", raw_path)
     df_raw = spark.read.parquet(raw_path)
 
-    df_clean = clean(df_raw)
+    df_clean    = clean(df_raw)
     df_enriched = enrich(df_clean)
 
     df_by_customer = aggregate_by_customer(df_enriched)
     df_by_category = aggregate_by_category(df_enriched)
 
     logger.info("Writing enriched orders to: %s/orders", validated_path)
-    (
-        df_enriched.write
-        .mode("overwrite")
-        .partitionBy("order_year", "order_month")
-        .parquet(f"{validated_path}/orders")
-    )
+    df_enriched.write.mode("overwrite").partitionBy("order_year", "order_month").parquet(f"{validated_path}/orders")
 
     logger.info("Writing customer aggregates to: %s/customer_summary", validated_path)
-    (
-        df_by_customer.write
-        .mode("overwrite")
-        .partitionBy("order_month")
-        .parquet(f"{validated_path}/customer_summary")
-    )
+    df_by_customer.write.mode("overwrite").partitionBy("order_month").parquet(f"{validated_path}/customer_summary")
 
     logger.info("Writing category aggregates to: %s/category_summary", validated_path)
-    (
-        df_by_category.write
-        .mode("overwrite")
-        .partitionBy("order_month")
-        .parquet(f"{validated_path}/category_summary")
-    )
+    df_by_category.write.mode("overwrite").partitionBy("order_month").parquet(f"{validated_path}/category_summary")
 
     logger.info("Transform complete.")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: transform.py <raw_s3_path> <validated_s3_path>")
-        sys.exit(1)
+    raw       = sys.argv[1] if len(sys.argv) > 1 else None
+    validated = sys.argv[2] if len(sys.argv) > 2 else None
 
-    raw_s3 = sys.argv[1]
-    validated_s3 = sys.argv[2]
+    raw_path       = raw       if raw       and not _is_unset(raw)       else DEFAULT_RAW_PATH
+    validated_path = validated if validated and not _is_unset(validated) else DEFAULT_VALIDATED_PATH
+
+    logger.info("raw_path=%s  validated_path=%s", raw_path, validated_path)
 
     spark = get_spark()
     try:
-        transform(spark, raw_s3, validated_s3)
+        transform(spark, raw_path, validated_path)
     finally:
         spark.stop()

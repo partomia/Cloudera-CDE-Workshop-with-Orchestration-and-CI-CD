@@ -14,19 +14,25 @@ from airflow.models import Variable
 from cloudera.cdp.airflow.operators.cde_operator import CDEJobRunOperator
 
 # ── Configuration ────────────────────────────────────────────────────────────
-# Set these Airflow Variables in the CDE Airflow UI or via CLI:
-#   airflow variables set S3_BUCKET          "s3://your-bucket"
-#   airflow variables set HIVE_DATABASE      "workshop_db"
-#   airflow variables set GE_ROOT_DIR        "/app/mount/great_expectations"
+# S3 is optional. If S3_BUCKET is not set, jobs fall back to inline sample
+# data and local CDE storage (/tmp/workshop/...) automatically.
+#
+# To enable S3, set these Airflow Variables in the CDE Airflow UI or CLI:
+#   airflow variables set S3_BUCKET     "s3://your-bucket"
+#   airflow variables set HIVE_DATABASE "workshop_db"
+#   airflow variables set GE_ROOT_DIR   "/app/mount/great_expectations"
 
-S3_BUCKET    = Variable.get("S3_BUCKET",    default_var="s3://workshop-bucket")
-HIVE_DB      = Variable.get("HIVE_DATABASE", default_var="workshop_db")
-GE_ROOT_DIR  = Variable.get("GE_ROOT_DIR",  default_var="/app/mount/great_expectations")
+S3_BUCKET   = Variable.get("S3_BUCKET",    default_var="")
+HIVE_DB     = Variable.get("HIVE_DATABASE", default_var="")
+GE_ROOT_DIR = Variable.get("GE_ROOT_DIR",  default_var="")
 
-LANDING_PATH   = f"{S3_BUCKET}/landing"
-RAW_PATH       = f"{S3_BUCKET}/raw"
-VALIDATED_PATH = f"{S3_BUCKET}/validated"
-CURATED_PATH   = f"{S3_BUCKET}/curated"
+# Only build S3 paths if a bucket is actually configured
+USE_S3 = bool(S3_BUCKET)
+
+LANDING_PATH   = f"{S3_BUCKET}/landing"   if USE_S3 else ""
+RAW_PATH       = f"{S3_BUCKET}/raw"       if USE_S3 else ""
+VALIDATED_PATH = f"{S3_BUCKET}/validated" if USE_S3 else ""
+CURATED_PATH   = f"{S3_BUCKET}/curated"   if USE_S3 else ""
 
 # ── Default args ─────────────────────────────────────────────────────────────
 default_args = {
@@ -56,7 +62,7 @@ with DAG(
         variables={
             "landing_path": LANDING_PATH,
             "raw_path": RAW_PATH,
-        },
+        } if USE_S3 else {},
         wait=True,
     )
 
@@ -65,8 +71,8 @@ with DAG(
         job_name="workshop-validate-data",
         variables={
             "raw_path": RAW_PATH,
-            "ge_root_dir": GE_ROOT_DIR,
-        },
+            "ge_root_dir": GE_ROOT_DIR or "/app/mount/great_expectations",
+        } if USE_S3 else {},
         wait=True,
     )
 
@@ -76,7 +82,7 @@ with DAG(
         variables={
             "raw_path": RAW_PATH,
             "validated_path": VALIDATED_PATH,
-        },
+        } if USE_S3 else {},
         wait=True,
     )
 
@@ -87,7 +93,7 @@ with DAG(
             "validated_path": VALIDATED_PATH,
             "curated_path": CURATED_PATH,
             "hive_database": HIVE_DB,
-        },
+        } if USE_S3 else {},
         wait=True,
     )
 

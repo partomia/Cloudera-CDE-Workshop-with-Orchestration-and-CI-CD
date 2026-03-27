@@ -2,6 +2,8 @@
 Module 05 - Validate Job
 Runs Great Expectations checkpoint on raw Parquet data.
 Exits with code 1 if any expectation fails — Airflow marks the task FAILED.
+If no paths provided, reads from default local CDE path and uses bundled GE config.
+
 Reference solution for: modules/05-data-quality/exercise_validate.py
 """
 
@@ -14,20 +16,19 @@ from great_expectations.core.batch import RuntimeBatchRequest
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DEFAULT_RAW_PATH = "/tmp/workshop/raw"
+DEFAULT_GE_ROOT  = "/app/mount/great_expectations"
+
+
+def _is_unset(val: str) -> bool:
+    return not val or (val.startswith("{{") and val.endswith("}}"))
+
 
 def get_spark() -> SparkSession:
-    return (
-        SparkSession.builder
-        .appName("workshop-validate-data")
-        .getOrCreate()
-    )
+    return SparkSession.builder.appName("workshop-validate-data").getOrCreate()
 
 
 def validate(spark: SparkSession, raw_path: str, ge_root_dir: str) -> bool:
-    """
-    Load raw Parquet into a Spark DataFrame, run GE checkpoint.
-    Returns True if all expectations pass, False otherwise.
-    """
     logger.info("Loading raw data from: %s", raw_path)
     df = spark.read.parquet(raw_path)
     df.createOrReplaceTempView("raw_orders")
@@ -71,16 +72,17 @@ def validate(spark: SparkSession, raw_path: str, ge_root_dir: str) -> bool:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: validate_data.py <raw_s3_path> <ge_root_dir>")
-        sys.exit(1)
+    raw    = sys.argv[1] if len(sys.argv) > 1 else None
+    ge_dir = sys.argv[2] if len(sys.argv) > 2 else None
 
-    raw_s3 = sys.argv[1]
-    ge_dir = sys.argv[2]
+    raw_path   = raw    if raw    and not _is_unset(raw)    else DEFAULT_RAW_PATH
+    ge_root    = ge_dir if ge_dir and not _is_unset(ge_dir) else DEFAULT_GE_ROOT
+
+    logger.info("raw_path=%s  ge_root=%s", raw_path, ge_root)
 
     spark = get_spark()
     try:
-        success = validate(spark, raw_s3, ge_dir)
+        success = validate(spark, raw_path, ge_root)
     finally:
         spark.stop()
 
