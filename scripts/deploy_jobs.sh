@@ -38,13 +38,18 @@ cde resource upload --name "${PYTHON_ENV}" \
 create_or_update_job() {
   local JOB_NAME=$1
   local SCRIPT=$2
-  local ARGS=$3
+  shift 2
+  # Remaining positional args are each passed as a separate --arg to CDE
+  local ARG_FLAGS=()
+  for arg in "$@"; do
+    ARG_FLAGS+=(--arg "${arg}")
+  done
 
   if cde job describe --name "${JOB_NAME}" &>/dev/null; then
     echo "==> Updating job: ${JOB_NAME}"
     cde job update --name "${JOB_NAME}" \
       --application-file "${SCRIPT}" \
-      --arg "${ARGS}" \
+      "${ARG_FLAGS[@]}" \
       --mount-1-resource "${RESOURCE_NAME}" \
       --python-env-resource-name "${PYTHON_ENV}"
   else
@@ -52,7 +57,7 @@ create_or_update_job() {
     cde job create --name "${JOB_NAME}" \
       --type spark \
       --application-file "${SCRIPT}" \
-      --arg "${ARGS}" \
+      "${ARG_FLAGS[@]}" \
       --mount-1-resource "${RESOURCE_NAME}" \
       --python-env-resource-name "${PYTHON_ENV}"
   fi
@@ -60,19 +65,19 @@ create_or_update_job() {
 
 create_or_update_job "workshop-ingest-raw" \
   "ingest_raw.py" \
-  "{{landing_path}} {{raw_path}}"
+  "{{landing_path}}" "{{raw_path}}"
 
 create_or_update_job "workshop-validate-data" \
   "validate_data.py" \
-  "{{raw_path}} {{ge_root_dir}}"
+  "{{raw_path}}" "{{ge_root_dir}}"
 
 create_or_update_job "workshop-transform" \
   "transform.py" \
-  "{{raw_path}} {{validated_path}}"
+  "{{raw_path}}" "{{validated_path}}"
 
 create_or_update_job "workshop-load-curated" \
   "load_curated.py" \
-  "{{validated_path}} {{curated_path}} {{hive_database}}"
+  "{{validated_path}}" "{{curated_path}}" "{{hive_database}}"
 
 echo ""
 echo "All CDE jobs deployed successfully."
