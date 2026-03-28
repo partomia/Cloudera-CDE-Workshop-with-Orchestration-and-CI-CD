@@ -38,18 +38,11 @@ cde resource upload --name "${PYTHON_ENV}" \
 create_or_update_job() {
   local JOB_NAME=$1
   local SCRIPT=$2
-  shift 2
-  # Remaining positional args are each passed as a separate --arg to CDE
-  local ARG_FLAGS=()
-  for arg in "$@"; do
-    ARG_FLAGS+=(--arg "${arg}")
-  done
 
   if cde job describe --name "${JOB_NAME}" &>/dev/null; then
     echo "==> Updating job: ${JOB_NAME}"
     cde job update --name "${JOB_NAME}" \
       --application-file "${SCRIPT}" \
-      "${ARG_FLAGS[@]}" \
       --mount-1-resource "${RESOURCE_NAME}" \
       --python-env-resource-name "${PYTHON_ENV}"
   else
@@ -57,27 +50,17 @@ create_or_update_job() {
     cde job create --name "${JOB_NAME}" \
       --type spark \
       --application-file "${SCRIPT}" \
-      "${ARG_FLAGS[@]}" \
       --mount-1-resource "${RESOURCE_NAME}" \
       --python-env-resource-name "${PYTHON_ENV}"
   fi
 }
 
-create_or_update_job "workshop-ingest-raw" \
-  "ingest_raw.py" \
-  "{{landing_path}}" "{{raw_path}}"
-
-create_or_update_job "workshop-validate-data" \
-  "validate_data.py" \
-  "{{raw_path}}" "{{ge_root_dir}}"
-
-create_or_update_job "workshop-transform" \
-  "transform.py" \
-  "{{raw_path}}" "{{validated_path}}"
-
-create_or_update_job "workshop-load-curated" \
-  "load_curated.py" \
-  "{{validated_path}}" "{{curated_path}}" "{{hive_database}}"
+# No --arg flags: jobs use built-in defaults (/tmp/workshop/...).
+# S3 paths are passed at runtime via CDEJobRunOperator overrides in the DAG.
+create_or_update_job "workshop-ingest-raw"    "ingest_raw.py"
+create_or_update_job "workshop-validate-data" "validate_data.py"
+create_or_update_job "workshop-transform"     "transform.py"
+create_or_update_job "workshop-load-curated"  "load_curated.py"
 
 echo ""
 echo "All CDE jobs deployed successfully."

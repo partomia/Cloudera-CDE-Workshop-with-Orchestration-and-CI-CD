@@ -59,41 +59,28 @@ with DAG(
     ingest = CDEJobRunOperator(
         task_id="ingest_raw",
         job_name="workshop-ingest-raw",
-        variables={
-            "landing_path": LANDING_PATH,
-            "raw_path": RAW_PATH,
-        } if USE_S3 else {},
+        overrides={"spark": {"args": [LANDING_PATH, RAW_PATH]}} if USE_S3 else {},
         wait=True,
     )
 
     validate = CDEJobRunOperator(
         task_id="validate_data",
         job_name="workshop-validate-data",
-        variables={
-            "raw_path": RAW_PATH,
-            "ge_root_dir": GE_ROOT_DIR or "/app/mount/great_expectations",
-        } if USE_S3 else {},
+        overrides={"spark": {"args": [RAW_PATH, GE_ROOT_DIR or "/app/mount/great_expectations"]}} if USE_S3 else {},
         wait=True,
     )
 
     transform = CDEJobRunOperator(
         task_id="transform",
         job_name="workshop-transform",
-        variables={
-            "raw_path": RAW_PATH,
-            "validated_path": VALIDATED_PATH,
-        } if USE_S3 else {},
+        overrides={"spark": {"args": [RAW_PATH, VALIDATED_PATH]}} if USE_S3 else {},
         wait=True,
     )
 
     load = CDEJobRunOperator(
         task_id="load_curated",
         job_name="workshop-load-curated",
-        variables={
-            "validated_path": VALIDATED_PATH,
-            "curated_path": CURATED_PATH,
-            "hive_database": HIVE_DB,
-        } if USE_S3 else {},
+        overrides={"spark": {"args": [VALIDATED_PATH, CURATED_PATH, HIVE_DB]}} if USE_S3 else {},
         wait=True,
     )
 
