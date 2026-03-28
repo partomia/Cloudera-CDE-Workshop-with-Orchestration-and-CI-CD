@@ -9,15 +9,22 @@ Reference solution for: modules/05-data-quality/exercise_validate.py
 
 import sys
 import logging
-from pyspark.sql import SparkSession
-import great_expectations as gx
-from great_expectations.core.batch import RuntimeBatchRequest
+from pyspark.sql import SparkSession, DataFrame
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DEFAULT_RAW_PATH = "/tmp/workshop/raw"
 DEFAULT_GE_ROOT  = "/app/mount/great_expectations"
+
+try:
+    import great_expectations as gx
+    from great_expectations.core.batch import RuntimeBatchRequest
+    GE_AVAILABLE = True
+    logger.info("Great Expectations available — using GE validation.")
+except ImportError:
+    GE_AVAILABLE = False
+    logger.warning("Great Expectations not installed — using native Spark validation fallback.")
 
 
 def _is_unset(val: str) -> bool:
@@ -28,14 +35,8 @@ def get_spark() -> SparkSession:
     return SparkSession.builder.appName("workshop-validate-data").getOrCreate()
 
 
-def validate(spark: SparkSession, raw_path: str, ge_root_dir: str) -> bool:
-    logger.info("Loading raw data from: %s", raw_path)
-    df = spark.read.parquet(raw_path)
-    df.createOrReplaceTempView("raw_orders")
-
-    logger.info("Initialising Great Expectations context from: %s", ge_root_dir)
+def validate_with_ge(spark: SparkSession, df: DataFrame, ge_root_dir: str) -> bool:
     context = gx.get_context(context_root_dir=ge_root_dir)
-
     batch_request = RuntimeBatchRequest(
         datasource_name="spark_datasource",
         data_connector_name="runtime_data_connector",
@@ -43,32 +44,62 @@ def validate(spark: SparkSession, raw_path: str, ge_root_dir: str) -> bool:
         runtime_parameters={"batch_data": df},
         batch_identifiers={"run_id": "workshop_run"},
     )
-
-    logger.info("Running checkpoint: raw_checkpoint")
     result = context.run_checkpoint(
         checkpoint_name="raw_checkpoint",
-        validations=[
-            {
-                "batch_request": batch_request,
-                "expectation_suite_name": "retail_raw_suite",
-            }
-        ],
+        validations=[{"batch_request": batch_request, "expectation_suite_name": "retail_raw_suite"}],
     )
-
     if result.success:
-        logger.info("All expectations passed.")
+        logger.info("GE: all expectations passed.")
     else:
-        logger.error("Expectation failures detected! Review Data Docs.")
         for vr in result.run_results.values():
             stats = vr["validation_result"]["statistics"]
-            logger.error(
-                "Evaluated: %d  Successful: %d  Failed: %d",
+            logger.error("GE failures — evaluated: %d  passed: %d  failed: %d",
                 stats["evaluated_expectations"],
                 stats["successful_expectations"],
-                stats["unsuccessful_expectations"],
-            )
-
+                stats["unsuccessful_expectations"])
     return result.success
+
+
+def validate_with_spark(spark: SparkSession, df: DataFrame) -> bool:
+    """Native Spark fallback: basic data quality assertions."""
+    failures = []
+
+    total = df.count()
+    if total == 0:
+        failures.append("Dataset is empty")
+
+    nulls = df.filter(
+        "order_id IS NULL OR customer_id IS NULL OR product_id IS NULL OR order_date IS NULL"
+    ).count()
+    if nulls > 0:
+        failures.append(f"{nulls} rows with NULL in required key columns")
+
+    bad_qty = df.filter("quantity <= 0").count()
+    if bad_qty > 0:
+        failures.append(f"{bad_qty} rows with quantity <= 0")
+
+    bad_price = df.filter("unit_price <= 0").count()
+    if bad_price > 0:
+        failures.append(f"{bad_price} rows with unit_price <= 0")
+
+    logger.info("Native Spark validation — total rows: %d", total)
+    if failures:
+        for f in failures:
+            logger.error("VALIDATION FAILED: %s", f)
+        return False
+
+    logger.info("Native Spark validation passed — all checks OK.")
+    return True
+
+
+def validate(spark: SparkSession, raw_path: str, ge_root_dir: str) -> bool:
+    logger.info("Loading raw data from: %s", raw_path)
+    df = spark.read.parquet(raw_path)
+
+    if GE_AVAILABLE:
+        return validate_with_ge(spark, df, ge_root_dir)
+    else:
+        return validate_with_spark(spark, df)
 
 
 if __name__ == "__main__":
