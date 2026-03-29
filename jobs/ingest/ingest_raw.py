@@ -14,7 +14,7 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_RAW_PATH = "/tmp/workshop/raw"
+DEFAULT_RAW_PATH = "s3a://go01-demo/workshop/raw"
 
 SAMPLE_SCHEMA = StructType([
     StructField("order_id",    StringType(),  True),

@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 TABLES = ["orders", "customer_summary", "category_summary"]
 
-DEFAULT_VALIDATED_PATH = "/tmp/workshop/validated"
-DEFAULT_CURATED_PATH   = "/tmp/workshop/curated"
+DEFAULT_VALIDATED_PATH = "s3a://go01-demo/workshop/validated"
+DEFAULT_CURATED_PATH   = "s3a://go01-demo/workshop/curated"
 DEFAULT_DATABASE       = "workshop_db"
 
 

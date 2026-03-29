@@ -17,8 +17,8 @@ from pyspark.sql import SparkSession, DataFrame
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_RAW_PATH       = "/tmp/workshop/raw"
-DEFAULT_VALIDATED_PATH = "/tmp/workshop/validated"
+DEFAULT_RAW_PATH       = "s3a://go01-demo/workshop/raw"
+DEFAULT_VALIDATED_PATH = "s3a://go01-demo/workshop/validated"
 
 
 def _is_unset(val: str) -> bool:
