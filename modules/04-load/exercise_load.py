@@ -53,11 +53,13 @@ def load(spark: SparkSession, validated_path: str, curated_path: str, database: 
         # Step a — drop the table if it already exists (idempotency)
         # Hint: spark.sql(f"DROP TABLE IF EXISTS {database}.{table}")
         #
-        # Step b — create an external table pointing to the curated S3 path
+        # Step b — create a table pointing to the curated S3 path
+        # Use USING PARQUET (Spark SQL syntax) — it infers schema from existing files.
+        # Note: STORED AS PARQUET (Hive DDL) requires an explicit schema and will fail.
         # Hint:
         #   spark.sql(f"""
-        #       CREATE EXTERNAL TABLE {database}.{table}
-        #       STORED AS PARQUET
+        #       CREATE TABLE {database}.{table}
+        #       USING PARQUET
         #       LOCATION '{dst}'
         #   """)
         raise NotImplementedError

@@ -48,8 +48,8 @@ def load(spark: SparkSession, validated_path: str, curated_path: str, database: 
 
         spark.sql(f"DROP TABLE IF EXISTS {database}.{table}")
         spark.sql(f"""
-            CREATE EXTERNAL TABLE {database}.{table}
-            STORED AS PARQUET
+            CREATE TABLE {database}.{table}
+            USING PARQUET
             LOCATION '{dst}'
         """)
 
