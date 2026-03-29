@@ -39,20 +39,18 @@ create_or_update_job() {
   local JOB_NAME=$1
   local SCRIPT=$2
 
+  # Always delete and recreate to guarantee a clean job definition (no stale args).
   if cde job describe --name "${JOB_NAME}" &>/dev/null; then
-    echo "==> Updating job: ${JOB_NAME}"
-    cde job update --name "${JOB_NAME}" \
-      --application-file "${SCRIPT}" \
-      --mount-1-resource "${RESOURCE_NAME}" \
-      --python-env-resource-name "${PYTHON_ENV}"
-  else
-    echo "==> Creating job: ${JOB_NAME}"
-    cde job create --name "${JOB_NAME}" \
-      --type spark \
-      --application-file "${SCRIPT}" \
-      --mount-1-resource "${RESOURCE_NAME}" \
-      --python-env-resource-name "${PYTHON_ENV}"
+    echo "==> Deleting existing job: ${JOB_NAME}"
+    cde job delete --name "${JOB_NAME}"
   fi
+
+  echo "==> Creating job: ${JOB_NAME}"
+  cde job create --name "${JOB_NAME}" \
+    --type spark \
+    --application-file "${SCRIPT}" \
+    --mount-1-resource "${RESOURCE_NAME}" \
+    --python-env-resource-name "${PYTHON_ENV}"
 }
 
 # No --arg flags: jobs use built-in defaults (/tmp/workshop/...).
