@@ -1,127 +1,132 @@
-# Data Engineering Workshop: PySpark + Great Expectations + Airflow on Cloudera CDE
+# Data Engineering Workshop — PySpark, Data Quality & Airflow on Cloudera CDE
 
-Build a production-style data pipeline from scratch — running entirely on **Cloudera Data Engineering (CDE)** — and learn five real-world skills along the way:
-
-| Skill | What you practise |
-|-------|------------------|
-| **IDE ↔ CDE Spark Connect** | Write and run PySpark from IntelliJ directly on a live CDE session |
-| **ELT Pipeline** | Ingest → validate → transform → load a retail orders dataset |
-| **Data Quality** | Great Expectations validates every batch and fails the pipeline on bad data |
-| **Airflow Orchestration** | A DAG sequences all jobs on CDE, with automatic retry and alerting |
-| **CI/CD** | GitHub Actions runs quality gates on every PR and deploys on merge to `main` |
+Welcome! In this workshop you will build a **real data pipeline** step by step — the same kind used in production at large companies. You don't need to be an expert. Just follow each step in order and you will be fine.
 
 ---
 
-## The Pipeline You Will Build
+## What Will You Build?
+
+You will take a raw CSV file of retail orders and turn it into clean, queryable data tables — automatically, every 5 minutes, on Cloudera's cloud platform.
+
+Here is the full journey your data takes:
 
 ```
- CSV file (S3 landing)
-        │
-        ▼
-  Step 1 ── Explore    — understand the raw dataset before touching it
-        │
-        ▼
-  Step 2 ── Ingest     — CSV → Parquet, partitioned by date  (S3 raw zone)
-        │
-        ▼
-  Step 3 ── Validate   — Great Expectations checks: nulls, types, ranges, categories
-        │                 pipeline stops here if data is bad
-        ▼
-  Step 4 ── Transform  — clean, enrich (revenue, month, year), aggregate by customer & category
-        │                 (S3 validated zone)
-        ▼
-  Step 5 ── Load       — write curated Parquet + register Hive tables  (S3 curated zone)
-        │
-        ▼
-  Step 6 ── Orchestrate — Airflow DAG ties all five jobs together on CDE
-        │
-        ▼
-  Step 7 ── CI/CD      — GitHub Actions: lint + test on PR, auto-deploy on merge
+Your CSV File
+      │
+      ▼
+① EXPLORE    → Look at the data. Understand its shape, columns, and problems.
+      │
+      ▼
+② INGEST     → Read the CSV. Save it as a fast Parquet file, organised by date.
+      │
+      ▼
+③ VALIDATE   → Check the data quality. If anything looks wrong, STOP here.
+      │            (Don't let bad data go further!)
+      ▼
+④ TRANSFORM  → Clean it up. Add new columns like "revenue". Group by customer.
+      │
+      ▼
+⑤ LOAD       → Save the final tables. Register them so they can be queried with SQL.
+      │
+      ▼
+⑥ ORCHESTRATE → Set up Airflow to run all these steps automatically on a schedule.
+      │
+      ▼
+⑦ CI/CD      → Every time you push code to GitHub, tests run and the pipeline redeploys.
 ```
 
-> **Note:** Validation runs between Ingest and Transform — this is intentional. Catching bad data early
-> prevents corrupt records from propagating into your curated tables.
+**Total time:** ~4 hours
 
 ---
 
-## Prerequisites
+## What Is Cloudera CDE?
 
-Make sure you have the following before starting:
+Think of Cloudera Data Engineering (CDE) as **Spark-as-a-service on AWS**. Instead of setting up servers yourself, CDE gives you:
+- A place to run Spark jobs (your code)
+- A managed Airflow to schedule those jobs
+- A Python environment for your dependencies
+- Everything secured and connected to your S3 bucket
 
-- [ ] **Python 3.11** on your laptop (`python3.11 --version`)
+You write your code locally on your laptop, deploy it to CDE with one script, and CDE runs it on real cloud infrastructure.
+
+---
+
+## Before You Start — What You Need
+
+Check all of these before the workshop begins:
+
+- [ ] **Python 3.11** installed on your laptop
+  ```bash
+  python3.11 --version   # should print Python 3.11.x
+  ```
 - [ ] **IntelliJ IDEA** or **PyCharm** installed
-- [ ] **Git** installed and configured
-- [ ] Access to a **Cloudera CDE virtual cluster** — your instructor will provide the endpoint URL
-- [ ] **AWS credentials** with read/write access to the workshop S3 bucket
+- [ ] **Git** installed
+- [ ] **CDE virtual cluster URL** — your instructor will give you this (looks like `https://xxxxx.cde.cloudera.com`)
+- [ ] **CDE CLI installed** — ask your instructor if unsure
 
 ---
 
-## Environment Setup
+## Part 0 — Set Up Your Laptop (Do This First)
 
-Work through these steps once before the first module. They take about 15 minutes.
+You only need to do this once. It takes about 15 minutes.
 
-### Step 1 — Clone the repo
+### 0.1 — Get the code
 
 ```bash
 git clone <repo-url>
 cd Spark-Workshop-Airflow-Git
 ```
 
-### Step 2 — Create a Python virtual environment
+### 0.2 — Create a Python environment
+
+This keeps the workshop packages separate from everything else on your laptop.
 
 ```bash
 python3.11 -m venv ~/venvs/cde-spark
-source ~/venvs/cde-spark/bin/activate     # macOS / Linux
+source ~/venvs/cde-spark/bin/activate     # Mac / Linux
 # .\venvs\cde-spark\Scripts\activate      # Windows
 ```
 
-### Step 3 — Install the CDE Spark Connect packages
+You should see `(cde-spark)` at the start of your terminal prompt. That means it worked.
 
-Download the two tarballs from **CDE console → Sessions → your session → Spark Connect → Configuration**, then:
+### 0.3 — Install the packages
+
+CDE uses a special version of Spark. You need two tarballs from your CDE session:
+
+1. Open the **CDE console** in your browser
+2. Go to **Sessions → your session → Spark Connect → Configuration**
+3. Download the two `.tar.gz` files shown there
+4. Run:
 
 ```bash
 pip install /path/to/cdeconnect-*.tar.gz
-pip install /path/to/pyspark-3.5.*.tar.gz    # must match the cdeconnect version
+pip install /path/to/pyspark-3.5.*.tar.gz
 pip install -r requirements.txt
 ```
 
-> **Why do I need both tarballs?**
-> `cdeconnect` is Cloudera's thin client that routes your Spark calls to the remote CDE virtual
-> cluster. `pyspark` must be the exact version CDE uses so the wire protocol matches.
+> **Why two files?** The first file (`cdeconnect`) lets your laptop talk to CDE. The second (`pyspark`) must match the exact Spark version CDE uses — otherwise they won't understand each other.
 
-### Step 4 — Configure the CDE CLI
+### 0.4 — Point IntelliJ to your Python environment
 
-Ensure `~/.cde/config.yaml` points to your virtual cluster:
+1. Open IntelliJ → **File → Project Structure → SDKs**
+2. Click **`+`** → **Add Python SDK → Existing environment**
+3. Set the path to: `~/venvs/cde-spark/bin/python`
+4. Name it exactly: **`Python 3.11 (cde-spark)`**
+5. Click **OK**
+
+The red "No Python interpreter" warning will disappear.
+
+### 0.5 — Configure the CDE CLI
+
+Open (or create) the file `~/.cde/config.yaml` and add:
 
 ```yaml
 vcluster-endpoint: https://<your-cde-endpoint>/dex/api/v1
 ```
 
-Your instructor will give you this URL.
+Your instructor will give you the endpoint URL.
 
-### Step 5 — Register the Python interpreter in IntelliJ
-
-The project is pre-configured (`.idea/modules.xml` + `.idea/Spark-Workshop-Airflow-Git.iml`)
-to use an SDK named **`Python 3.11 (cde-spark)`**. IntelliJ just needs to know where that
-interpreter lives on your machine:
-
-1. **File → Project Structure → SDKs → `+` → Add Python SDK → Existing environment**
-2. Path: `~/venvs/cde-spark/bin/python`
-3. Name it exactly **`Python 3.11 (cde-spark)`** (must match)
-4. Click **OK / Apply** — IntelliJ will index the environment and the red
-   _"No Python interpreter"_ banner will disappear automatically
-
-> **Why does this work?** The `.iml` file tells IntelliJ to look for an SDK named
-> `Python 3.11 (cde-spark)`. Once you register it once, all run configurations inherit it.
-> You never need to set it per-file again.
-
-> **Troubleshooting:** If you still see _"Cannot find Python interpreter"_ after adding the SDK,
-> go to **File → Project Structure → Project** and confirm the **Project SDK** dropdown shows
-> `Python 3.11 (cde-spark)`. If it shows `<No SDK>`, select it from the dropdown.
-
-### Step 6 — Verify your connection
-
-Open `tests/test_cde_connect.py`, set `CDE_SESSION_NAME` at the top to your session name, then run it:
+### 0.6 — Test your connection
 
 ```bash
 python tests/test_cde_connect.py
@@ -132,213 +137,234 @@ Expected output:
 Connecting to CDE session: <session-name>
 Spark version  : 3.5.x
 spark.range(10).count() = 10
-SUCCESS: IDE -> CDE Spark Connect session is working.
+SUCCESS: IDE → CDE Spark Connect session is working.
 ```
 
-If you see this, you are ready to start.
+If you see this — great, you are ready! If not, ask your instructor.
 
 ---
 
-## Important: Spark Connect Coding Patterns
+## Part 1 — Run the Demos (See It Working First)
 
-The PySpark version bundled with CDE uses a JVM-bridge implementation of
-`pyspark.sql.functions` (`F.col()`, `F.sum()`, `F.upper()`, etc.) that requires a local
-`SparkContext`. Spark Connect has no local JVM, so those calls fail with:
+Before writing any code yourself, run the demos to see the full pipeline working.
 
-```
-AssertionError: SparkContext._active_spark_context is not None
-```
-
-**All code in this project uses Spark Connect-safe alternatives:**
-
-| Instead of | Use |
-|---|---|
-| `F.col("qty").cast(IntegerType())` | `selectExpr("CAST(qty AS INT) AS qty")` |
-| `F.upper(F.trim(F.col("cat")))` | `selectExpr("UPPER(TRIM(cat)) AS cat")` |
-| `F.sum("revenue")` in `.agg()` | `spark.sql("SELECT SUM(revenue) ...")` via temp view |
-| `F.col("x").desc()` | `.orderBy("x", ascending=False)` |
-| `withColumn("ts", current_timestamp())` | `selectExpr("current_timestamp() AS ts")` |
-
-These patterns work identically on Spark Connect (IDE → CDE) and classic Spark (unit tests, CDE jobs).
-
----
-
-## Run the Demos First
-
-Before diving into exercises, run the demo scripts to see the full pipeline working end-to-end.
-Each script connects to your CDE session and prints results — no arguments needed, no S3 required.
-
-Set your session name at the top of each file:
+Open each file in IntelliJ and set your session name at the top:
 ```python
-CDE_SESSION_NAME = "your-session-name"   # one line at the top of each demo
+CDE_SESSION_NAME = "your-session-name"   # change this line
 ```
 
-Then run in order:
+Then run them in order:
 
-| # | Script | What it shows |
-|---|--------|--------------|
-| 1 | `demos/demo_explore.py` | Schema inspection, row counts, null checks, distributions |
-| 2 | `demos/demo_etl.py` | Full pipeline on inline data: raw → clean → enrich → aggregate |
+| Demo | File | What it does |
+|------|------|-------------|
+| 1 | `demos/demo_explore.py` | Shows you the dataset — row counts, columns, sample data |
+| 2 | `demos/demo_etl.py` | Runs the full pipeline on sample data in one shot |
 
-> The demos use **inline sample data** (no S3 dependency) so you can run them immediately after
-> completing environment setup.
+Both demos use **built-in sample data** — no S3 setup needed. Just run and watch.
 
 ---
 
-## Workshop Modules
+## Part 2 — The Workshop Modules
 
-Now work through the modules in order. Each module has:
-- A **README** with concepts and step-by-step instructions
-- An **exercise file** with `TODO` items for you to complete
-- A **reference solution** in `jobs/` (modules 02–05) or `dags/` (module 06)
+Now it's your turn. Work through the modules **in order**. Each one builds on the previous.
 
-| Module | Topic | Exercise file | Time |
-|--------|-------|--------------|------|
-| [01 — Explore](modules/01-explore/README.md) | Explore the dataset with PySpark | `demos/demo_explore.py` | 20 min |
-| [02 — Ingest](modules/02-ingest/README.md) | CSV → partitioned Parquet | `modules/02-ingest/exercise_ingest.py` | 30 min |
-| [03 — Transform](modules/03-transform/README.md) | Clean, enrich, aggregate | `modules/03-transform/exercise_transform.py` | 45 min |
-| [04 — Load](modules/04-load/README.md) | Curated Parquet + Hive tables | `modules/04-load/exercise_load.py` | 30 min |
-| [05 — Data Quality](modules/05-data-quality/README.md) | Great Expectations validation | `modules/05-data-quality/exercise_validate.py` | 45 min |
-| [06 — Orchestrate](modules/06-orchestrate/README.md) | Airflow DAG on CDE | `modules/06-orchestrate/exercise_dag.py` | 40 min |
-| [07 — CI/CD](modules/07-cicd/README.md) | GitHub Actions: lint, test, deploy | *(config files)* | 30 min |
-
-**Total time:** ~4 hours
-
-> Stuck on a TODO? The reference solution is always one folder away:
-> `jobs/` for modules 02–05, `dags/` for module 06.
+Every module has:
+- 📖 A **README** explaining the concept (read this first)
+- ✏️ An **exercise file** with `# TODO` comments — this is where you write code
+- ✅ A **reference solution** in `jobs/` or `dags/` — peek if you get stuck
 
 ---
 
-## What Each Step Produces
+### Module 01 — Explore the Data
+**Folder:** `modules/01-explore/`
+**Time:** ~20 minutes
 
-| Step | Input | Output | Location |
-|------|-------|--------|----------|
-| Ingest | `retail_orders.csv` | Parquet partitioned by `order_date` | `s3://bucket/raw/` |
-| Validate | raw Parquet | Pass/fail report + HTML Data Docs | exits 0 or 1 |
-| Transform | raw Parquet | `orders/`, `customer_summary/`, `category_summary/` | `s3://bucket/validated/` |
-| Load | validated Parquet | Hive tables in `workshop_db` | `s3://bucket/curated/` |
-| Airflow | all four jobs | Scheduled daily pipeline at 06:00 UTC | CDE Airflow UI |
+Learn to look at a dataset before touching it. You will check:
+- How many rows? What columns?
+- Are there nulls? Duplicates?
+- What do the values look like?
 
----
-
-## Running Jobs on CDE
-
-Once you have completed the exercises, deploy and run the reference solutions as CDE jobs:
-
-```bash
-# Ingest
-cde job run --name workshop-ingest-raw \
-  --arg s3://your-bucket/landing \
-  --arg s3://your-bucket/raw
-
-# Validate
-cde job run --name workshop-validate-data \
-  --arg s3://your-bucket/raw \
-  --arg /app/mount/great_expectations
-
-# Transform
-cde job run --name workshop-transform \
-  --arg s3://your-bucket/raw \
-  --arg s3://your-bucket/validated
-
-# Load
-cde job run --name workshop-load-curated \
-  --arg s3://your-bucket/validated \
-  --arg s3://your-bucket/curated \
-  --arg workshop_db
-```
-
-After load completes, verify the tables in Cloudera:
-```sql
-SELECT * FROM workshop_db.orders           LIMIT 10;
-SELECT * FROM workshop_db.customer_summary ORDER BY total_revenue DESC;
-SELECT * FROM workshop_db.category_summary ORDER BY total_revenue DESC;
-```
+**Exercise file:** `demos/demo_explore.py`
 
 ---
 
-## Airflow DAG
+### Module 02 — Ingest
+**Folder:** `modules/02-ingest/`
+**Time:** ~30 minutes
 
-**File:** `dags/etl_pipeline_dag.py`
+Read the raw CSV file and save it as Parquet — a faster, compressed format used in all real data pipelines. You will also partition the data by date so queries run faster later.
 
-The DAG runs all four jobs in sequence and starts automatically (unpaused on creation):
-
-```
-ingest_raw  →  validate_data  →  transform  →  load_curated
-```
-
-If any job fails (e.g. a data quality check), the pipeline stops immediately — preventing bad data from reaching the curated zone.
-
-**Schedule:** Every 5 minutes (`*/5 * * * *`). No manual trigger needed — the DAG starts running as soon as it is deployed.
-
-**Set Airflow Variables before deploying:**
-```bash
-airflow variables set S3_BUCKET     "s3://your-bucket"
-airflow variables set HIVE_DATABASE "workshop_db"
-airflow variables set GE_ROOT_DIR   "/app/mount/great_expectations"
-```
-
-**Deploy:**
-```bash
-./scripts/deploy_dag.sh
-# DAG starts automatically — visible in CDE Airflow UI → DAGs → retail_etl_pipeline
-```
-
-> **Note:** The deploy scripts can be run from any directory — they resolve all paths relative to the repo root automatically.
+**Exercise file:** `modules/02-ingest/exercise_ingest.py`
+**Reference solution:** `jobs/ingest/ingest_raw.py`
 
 ---
 
-## CI/CD with GitHub Actions
+### Module 03 — Transform
+**Folder:** `modules/03-transform/`
+**Time:** ~45 minutes
+
+Take the raw data and make it useful:
+- Remove rows with missing values
+- Add a `revenue` column (`quantity × unit_price`)
+- Group orders by customer and by product category
+
+**Exercise file:** `modules/03-transform/exercise_transform.py`
+**Reference solution:** `jobs/transform/transform.py`
+
+---
+
+### Module 04 — Load
+**Folder:** `modules/04-load/`
+**Time:** ~30 minutes
+
+Write the final transformed data to its permanent home on S3. Then register it as a Hive table so anyone on the platform can query it with SQL.
+
+**Exercise file:** `modules/04-load/exercise_load.py`
+**Reference solution:** `jobs/load/load_curated.py`
+
+---
+
+### Module 05 — Data Quality
+**Folder:** `modules/05-data-quality/`
+**Time:** ~45 minutes
+
+Use **Great Expectations** to define rules about your data:
+- No null order IDs
+- Quantity must be greater than 0
+- Category must be one of a known list
+
+If any rule fails, the pipeline stops — protecting downstream tables from bad data.
+
+**Exercise file:** `modules/05-data-quality/exercise_validate.py`
+**Reference solution:** `jobs/validate/validate_data.py`
+
+---
+
+### Module 06 — Orchestrate with Airflow
+**Folder:** `modules/06-orchestrate/`
+**Time:** ~40 minutes
+
+Wire all four jobs together into one Airflow DAG. Airflow will run them in the right order automatically on a schedule. If any job fails, the rest won't run.
+
+```
+ingest_raw → validate_data → transform → load_curated
+```
+
+**Exercise file:** `modules/06-orchestrate/exercise_dag.py`
+**Reference solution:** `dags/etl_pipeline_dag.py`
+
+---
+
+### Module 07 — CI/CD with GitHub
+**Folder:** `modules/07-cicd/`
+**Time:** ~30 minutes
+
+Set up automation so that every time you push code:
+- Tests run automatically (catches bugs before they reach production)
+- If all tests pass and the code merges to `main`, the pipeline redeploys to CDE automatically
 
 **Files:** `.github/workflows/ci.yml`, `.github/workflows/cd.yml`
 
-**On every Pull Request (CI):**
+---
 
-| Check | Tool | Catches |
-|-------|------|---------|
-| Code style | `black` | Formatting |
-| Code quality | `pylint` ≥ 8.0 | Bugs, bad patterns |
-| Unit tests | `pytest` | Logic errors |
-| GE dry-run | Great Expectations | Broken expectation suite |
+## Part 3 — Deploy Everything to CDE
 
-**On merge to `main` (CD):** deploys all Spark jobs and the Airflow DAG to CDE automatically.
+When you are done with the exercises, run these two scripts to deploy the full pipeline to CDE:
 
-**Required GitHub Secrets** (Settings → Secrets and variables → Actions):
+```bash
+# Step 1 — Deploy the Spark jobs
+./scripts/deploy_jobs.sh
 
-| Secret | Value |
-|--------|-------|
-| `CDP_ENDPOINT` | Cloudera CDP control plane URL |
-| `CDP_ACCESS_KEY` | CDP access key ID |
-| `CDP_PRIVATE_KEY` | CDP private key |
-| `CDE_VC_ENDPOINT` | CDE virtual cluster endpoint URL |
+# Step 2 — Deploy the Airflow DAG
+./scripts/deploy_dag.sh
+```
+
+You can run these scripts from any folder — they always find the right files automatically.
+
+After deploying, go to the **CDE Airflow UI → DAGs** and you will see `retail_etl_pipeline` running on its schedule.
 
 ---
 
-## Repository Structure
+## Part 4 — Check the Results
+
+Once the pipeline has run, you can query the output tables in Cloudera:
+
+```sql
+-- See the orders
+SELECT * FROM workshop_db.orders LIMIT 10;
+
+-- Who spent the most?
+SELECT * FROM workshop_db.customer_summary
+ORDER BY total_revenue DESC;
+
+-- Which product category sells best?
+SELECT * FROM workshop_db.category_summary
+ORDER BY total_revenue DESC;
+```
+
+Run these in **Cloudera Data Warehouse (CDW)** → Hue SQL Editor, or any Impala/Hive client.
+
+---
+
+## Helpful Things to Know
+
+### The data flows through these S3 locations:
+
+| Stage | S3 Path | What's stored |
+|-------|---------|--------------|
+| Raw | `s3a://go01-demo/workshop/raw/` | Original CSV converted to Parquet |
+| Validated | `s3a://go01-demo/workshop/validated/` | Cleaned and enriched data |
+| Curated | `s3a://go01-demo/workshop/curated/` | Final tables (also in Hive) |
+
+### What if I don't have S3 configured?
+
+No problem! All jobs automatically fall back to using **built-in sample data** and write to safe temporary paths inside CDE. You can complete the full workshop without ever touching S3.
+
+### Where are the reference solutions?
+
+| Module | Reference solution |
+|--------|-------------------|
+| Ingest | `jobs/ingest/ingest_raw.py` |
+| Transform | `jobs/transform/transform.py` |
+| Load | `jobs/load/load_curated.py` |
+| Validate | `jobs/validate/validate_data.py` |
+| Airflow DAG | `dags/etl_pipeline_dag.py` |
+
+### I'm stuck on a TODO — what do I do?
+
+1. Read the comment above the `TODO` — it always has a hint
+2. Look at the matching reference solution in `jobs/`
+3. Ask your instructor
+
+---
+
+## CI/CD Setup (For Module 07)
+
+To enable automatic deployment via GitHub Actions, add these secrets to your GitHub repo:
+
+**Settings → Secrets and variables → Actions → New repository secret**
+
+| Secret name | What to put there |
+|-------------|------------------|
+| `CDP_ENDPOINT` | Your Cloudera CDP control plane URL |
+| `CDP_ACCESS_KEY` | Your CDP access key |
+| `CDP_PRIVATE_KEY` | Your CDP private key |
+| `CDE_VC_ENDPOINT` | Your CDE virtual cluster endpoint URL |
+
+Your instructor will give you these values.
+
+Once set up: push to a branch → open a PR → tests run automatically. Merge to `main` → pipeline deploys to CDE automatically.
+
+---
+
+## Repo Layout
 
 ```
-├── .github/workflows/
-│   ├── ci.yml                      # PR checks: lint, tests, GE dry-run
-│   └── cd.yml                      # Deploy to CDE on merge to main
-├── dags/
-│   └── etl_pipeline_dag.py         # Airflow DAG (module 06)
-├── data/sample/
-│   └── retail_orders.csv           # 20-row sample dataset
-├── demos/
-│   ├── demo_explore.py             # One-click: dataset exploration on CDE
-│   ├── demo_etl.py                 # One-click: full ELT pipeline on CDE
-│   └── sample_data.py              # Inline data used by demos (no S3 needed)
-├── great_expectations/
-│   ├── expectations/
-│   │   └── retail_raw_suite.json   # Data quality rules (module 05)
-│   └── checkpoints/
-│       └── raw_checkpoint.yml
-├── jobs/                           # Reference solutions (deployed as CDE jobs)
-│   ├── ingest/ingest_raw.py        # Module 02
-│   ├── transform/transform.py      # Module 03
-│   ├── load/load_curated.py        # Module 04
-│   └── validate/validate_data.py   # Module 05
-├── modules/                        # Hands-on exercises — work through in order
+├── demos/                          ← Run these first to see the pipeline working
+│   ├── demo_explore.py
+│   └── demo_etl.py
+│
+├── modules/                        ← Your exercises — work through in order
 │   ├── 01-explore/
 │   ├── 02-ingest/
 │   ├── 03-transform/
@@ -346,25 +372,44 @@ airflow variables set GE_ROOT_DIR   "/app/mount/great_expectations"
 │   ├── 05-data-quality/
 │   ├── 06-orchestrate/
 │   └── 07-cicd/
+│
+├── jobs/                           ← Reference solutions (also deployed to CDE)
+│   ├── ingest/ingest_raw.py
+│   ├── transform/transform.py
+│   ├── load/load_curated.py
+│   └── validate/validate_data.py
+│
+├── dags/
+│   └── etl_pipeline_dag.py         ← Airflow DAG (module 06 reference solution)
+│
 ├── scripts/
-│   ├── deploy_jobs.sh              # Deploys all CDE Spark jobs
-│   └── deploy_dag.sh               # Deploys the Airflow DAG
+│   ├── deploy_jobs.sh              ← Run this to deploy Spark jobs to CDE
+│   └── deploy_dag.sh               ← Run this to deploy the Airflow DAG to CDE
+│
 ├── tests/
-│   ├── test_cde_connect.py         # IDE → CDE connectivity smoke test
-│   └── unit/                       # Unit tests for job logic
-├── cde.py                          # CDE Spark Connect session helper
-└── requirements.txt
+│   └── test_cde_connect.py         ← Run this to test your laptop → CDE connection
+│
+└── great_expectations/             ← Data quality rules (module 05)
 ```
 
 ---
 
-## Tech Stack
+## Quick Reference — CDE CLI Commands
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Python | 3.11 | Runtime |
-| PySpark | 3.5.x | Distributed data processing |
-| Great Expectations | 0.18.x | Data quality validation |
-| Apache Airflow | 2.6.x | Pipeline orchestration |
-| Cloudera CDE | 7.x | Managed Spark + Airflow on AWS |
-| GitHub Actions | — | CI/CD automation |
+```bash
+# Check your jobs
+cde job list
+
+# Run a job manually
+cde job run --name workshop-ingest-raw
+
+# Check job run status
+cde run list --job-name workshop-ingest-raw
+
+# View logs for a specific run
+cde run logs --id <run-id> --type driver/stderr
+```
+
+---
+
+*Questions? Ask your instructor or raise an issue in this repo.*
