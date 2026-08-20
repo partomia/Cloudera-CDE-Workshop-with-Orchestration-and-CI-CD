@@ -99,10 +99,12 @@ CDE uses a special version of Spark. You need two tarballs from your CDE session
 4. Run:
 
 ```bash
+pip install -r requirements.txt
 pip install /path/to/cdeconnect-*.tar.gz
 pip install /path/to/pyspark-3.5.*.tar.gz
-pip install -r requirements.txt
 ```
+
+> **Install order matters.** `requirements.txt` must go first — it pulls in a floor version of `pyspark`. The CDE tarballs go last so the exact CDE-matched `pyspark` build wins. If you ever re-run `pip install -r requirements.txt` after this, reinstall the `pyspark-3.5.*.tar.gz` tarball again afterward, or you'll silently fall back to a pip-resolved `pyspark` that lacks the Spark Connect module CDE needs.
 
 > **Why two files?** The first file (`cdeconnect`) lets your laptop talk to CDE. The second (`pyspark`) must match the exact Spark version CDE uses — otherwise they won't understand each other.
 
@@ -141,6 +143,15 @@ SUCCESS: IDE → CDE Spark Connect session is working.
 ```
 
 If you see this — great, you are ready! If not, ask your instructor.
+
+Before you troubleshoot, cross-check the CDE console's **Sessions → your session → Connect** tab against your local setup — it shows the exact Spark version and connection snippet your session expects:
+
+![CDE Spark Connect session details](docs/images/cde-spark-connect-session.png)
+
+What to check against this page:
+- **SPARK VERSION** (top of page) must match the `pyspark-3.5.*.tar.gz` tarball you installed — a mismatch is the most common cause of `ModuleNotFoundError: No module named 'pyspark.sql.connect'`.
+- **STATUS** must be `Available` — a `killed` session (TTL expired, default 8h) needs recreating: `cde session create --name <name> --type spark-connect`.
+- **SESSION_NAME** in `tests/test_cde_connect.py` must exactly match the session name shown in the page breadcrumb.
 
 ---
 

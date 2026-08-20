@@ -166,6 +166,14 @@ spark.range(10).count() = 10
 SUCCESS: IDE -> CDE Spark Connect session is working.
 ```
 
+If this fails, open the CDE console → **Sessions → your session → Connect** tab and compare it against your local setup:
+
+![CDE Spark Connect session details](images/cde-spark-connect-session.png)
+
+- **SPARK VERSION** must match the `pyspark-3.5.*.tar.gz` tarball installed in your venv (Step 5/6). If your venv has a different pyspark version — e.g. because `pip install -r requirements.txt` ran *after* the tarball and re-pinned it — you'll get `ModuleNotFoundError: No module named 'pyspark.sql.connect'`. Reinstall the tarball last to fix it.
+- **STATUS** must read `Available`. `Killed` means the session's TTL (default 8h, see **EXPIRES ON**) expired — recreate it with the Step 4 command.
+- The session name in the breadcrumb (top-left) must exactly match `SESSION_NAME` in `tests/test_cde_connect.py`.
+
 ---
 
 ## Step 8 — Configure IntelliJ
@@ -210,3 +218,4 @@ If IntelliJ shows "Cannot find Python interpreter":
 | `spark-connect sessions don't support interact` | Wrong CLI command | Use `cdeconnect` package (not `cde session interact`) |
 | `Cannot find Python interpreter` in IntelliJ | Stale SDK registry after venv rebuild | Re-add the SDK in `File → Project Structure → SDKs` |
 | Session state is `killed` | TTL expired (default 8h) | Re-create: `cde session create --name <name> --type spark-connect` |
+| `ModuleNotFoundError: No module named 'pyspark.sql.connect'` | `pip install -r requirements.txt` ran after the CDE `pyspark-3.5.*.tar.gz` tarball and silently downgraded pyspark below 3.4 | Reinstall the CDE tarball last: `pip install /path/to/pyspark-3.5.*.tar.gz` |

@@ -13,7 +13,7 @@ Usage:
 
 from cde import CDESparkConnectSession
 
-SESSION_NAME = "r1rsingh"
+SESSION_NAME = "cdecli"
 
 print(f"Connecting to CDE session: {SESSION_NAME}")
 spark = CDESparkConnectSession.builder.sessionName(SESSION_NAME).get()

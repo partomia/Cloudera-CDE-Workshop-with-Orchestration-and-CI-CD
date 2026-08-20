@@ -1,5 +1,5 @@
 # Dev & local testing dependencies
-pyspark==3.3.2
+pyspark>=3.5.4
 great-expectations==0.18.9
 apache-airflow==2.6.3
 boto3>=1.26.0

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 TOKEN_CACHE = Path.home() / "Library/Caches/cloudera/cde/token-cache"
-VCLUSTER_KEY_PREFIX = "https://t5c86ppm.cde-s9xvdpkr.go01-dem.ylcu-atmi.cloudera.site"
+VCLUSTER_KEY_PREFIX = "https://gg9fbglm.cde-pjq5xtvb.federal.dp5i-5vkq.cloudera.site"
 
 cache = json.loads(TOKEN_CACHE.read_text())
 for key, value in cache.items():
