@@ -294,6 +294,27 @@ You can run these scripts from any folder — they always find the right files a
 
 After deploying, go to the **CDE Airflow UI → DAGs** and you will see `retail_etl_pipeline` running on its schedule.
 
+### Running a single job from your laptop
+
+You don't have to deploy the whole pipeline to test one job. `scripts/run_cde_job.py` submits a single job to CDE and waits for it to finish — this does **not** run Spark locally, it just shells out to the CDE CLI:
+
+```bash
+python scripts/run_cde_job.py workshop-ingest-raw
+```
+
+You'll see output similar to:
+
+```
+Submitting workshop-ingest-raw to CDE and waiting for it to finish...
+Job run 482 submitted for job "workshop-ingest-raw"
+Waiting for job run 482 to finish...
+Job run 482 succeeded.
+```
+
+The exit code mirrors the job's pass/fail status, so this also works as a step in a script or CI pipeline.
+
+This is exactly what the `ingest_raw`, `transform`, `validate_data`, and `load_curated` **IntelliJ/PyCharm run configurations** do under the hood — hit ▶ Run on any of them to trigger that job on CDE without leaving your IDE.
+
 ---
 
 ## Part 4 — Check the Results
