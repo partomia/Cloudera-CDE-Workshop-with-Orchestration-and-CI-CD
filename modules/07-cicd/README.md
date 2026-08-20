@@ -22,9 +22,11 @@ By the end of this module you will be able to:
 
 **Continuous Integration (CI):** Every time someone pushes a change, automated checks run to catch bugs and style issues before they reach the main branch.
 
-**Continuous Deployment (CD):** Every time code is merged to `main`, the latest version is automatically deployed to CDE — no manual `cde job run` commands needed.
+**Continuous Deployment (CD):** In a typical setup, every merge to `main` would automatically deploy the latest version to CDE. In this workshop, deployment is a **manual step after merge** — see the note below on why full automation isn't possible with a GitHub-hosted runner.
 
-Together they mean: *you push code, tests run, and if everything passes, the pipeline deploys itself.*
+Together they mean: *you push code, tests run automatically, and once they pass you run one command to deploy.*
+
+> **Why isn't CD fully automatic here?** The CDE CLI has no public download — Cloudera only offers it as an authenticated, per-virtual-cluster binary from the CDP Console (Cluster Details → CLI TOOL). A GitHub-hosted runner can't fetch it, and since this repo is public, redistributing Cloudera's binary as a release asset would be a licensing risk. `cd.yml` runs on every merge to `main` and prints a reminder instead of silently failing. Two ways to get true automation if you need it: register a **self-hosted runner** on a machine that already has the CDE CLI installed, or host the binary in a **private** mirror repo your org controls and pull it into CI with a token.
 
 ---
 
@@ -88,26 +90,28 @@ The CI pipeline has two jobs that run in order:
 **Triggers:** Any push to `main` (i.e., a merged PR)
 
 ```yaml
-- name: Install CDE CLI
-  run: curl -L "..." -o /usr/local/bin/cde && chmod +x /usr/local/bin/cde
+- name: Manual deploy required
+  run: |
+    cat <<'EOF'
+    main branch updated — CDE deployment is a MANUAL step.
+    Run: ./scripts/deploy_jobs.sh && ./scripts/deploy_dag.sh
+    EOF
 ```
-> Downloads the CDE CLI binary into the GitHub Actions runner.
+> Prints a reminder instead of deploying automatically — see the note above on why. The
+> workflow deliberately exits 0 (success) so it doesn't clutter the Actions tab with a
+> failure on every merge; it's a visibility step, not a deploy step.
 
-```yaml
-- name: Configure CDE CLI
-  run: cde configure --cdp-endpoint "${{ secrets.CDP_ENDPOINT }}" ...
+**To actually deploy after merging**, run this yourself from a machine with the CDE CLI
+installed and configured:
+
+```bash
+./scripts/deploy_jobs.sh
+./scripts/deploy_dag.sh
+# or: make deploy
 ```
-> Authenticates the CLI using secrets stored in GitHub (never in code).
 
-```yaml
-- name: Deploy Spark jobs
-  run: ./scripts/deploy_jobs.sh
-
-- name: Deploy Airflow DAG
-  run: ./scripts/deploy_dag.sh
-```
-> Runs the deployment scripts. These are idempotent — they create the job if it does not
-> exist, or update it if it does. Safe to run on every merge.
+These scripts are idempotent — they create each job if it doesn't exist, or delete and
+recreate it if it does. Safe to run after every merge.
 
 ---
 
@@ -122,7 +126,9 @@ Configure these in **your repo → Settings → Secrets and variables → Action
 | `CDP_PRIVATE_KEY` | Your CDP private key |
 | `CDE_VC_ENDPOINT` | Your CDE virtual cluster endpoint URL |
 
-> Your instructor will provide these values for the workshop environment.
+> `cd.yml` does not use these by default (it only prints a reminder). They're only needed
+> if you wire up a self-hosted runner or a private CLI mirror for true automated deploys —
+> see the note above.
 
 ---
 
@@ -137,12 +143,12 @@ Configure these in **your repo → Settings → Secrets and variables → Action
    - Push and open a PR — watch pylint fail
    - Fix the issue and push again — watch CI pass
 
-4. Configure the four GitHub Secrets listed above
+4. Merge your branch to `main` — watch the CD workflow print the deploy reminder in the Actions tab
 
-5. Merge your branch to `main` — watch the CD workflow in the Actions tab
-
-6. Verify the deployment in CDE:
+5. Deploy manually and verify:
    ```bash
+   ./scripts/deploy_jobs.sh
+   ./scripts/deploy_dag.sh
    cde job list | grep workshop
    ```
    All four jobs should show an updated timestamp.

@@ -272,7 +272,7 @@ ingest_raw → validate_data → transform → load_curated
 
 Set up automation so that every time you push code:
 - Tests run automatically (catches bugs before they reach production)
-- If all tests pass and the code merges to `main`, the pipeline redeploys to CDE automatically
+- When code merges to `main`, a reminder step fires — actual redeploy to CDE is a manual command (`make deploy`), since Cloudera's CLI has no public download a GitHub-hosted runner can install. See `modules/07-cicd/README.md` for why and how to get full automation if you need it.
 
 **Files:** `.github/workflows/ci.yml`, `.github/workflows/cd.yml`
 
@@ -323,13 +323,15 @@ Run these in **Cloudera Data Warehouse (CDW)** → Hue SQL Editor, or any Impala
 
 | Stage | S3 Path | What's stored |
 |-------|---------|--------------|
-| Raw | `s3a://go01-demo/workshop/raw/` | Original CSV converted to Parquet |
-| Validated | `s3a://go01-demo/workshop/validated/` | Cleaned and enriched data |
-| Curated | `s3a://go01-demo/workshop/curated/` | Final tables (also in Hive) |
+| Raw | `s3a://federal-buk-574bcea0/workshop/raw/` | Original CSV converted to Parquet |
+| Validated | `s3a://federal-buk-574bcea0/workshop/validated/` | Cleaned and enriched data |
+| Curated | `s3a://federal-buk-574bcea0/workshop/curated/` | Final tables (also in Hive) |
+
+<!-- Previous environment used s3a://go01-demo/workshop/ — kept here for reference if you ever redeploy against that cluster. -->
 
 ### What if I don't have S3 configured?
 
-No problem! All jobs automatically fall back to using **built-in sample data** and write to safe temporary paths inside CDE. You can complete the full workshop without ever touching S3.
+No problem! If the Airflow `S3_BUCKET` variable isn't set, jobs automatically fall back to using **built-in sample data**, but they still write output to the default bucket hardcoded in each job script (`DEFAULT_RAW_PATH` etc. in `jobs/*.py`) — currently `s3a://federal-buk-574bcea0/workshop/`. Point that constant at whatever bucket your CDE cluster's IAM role can actually write to before running the pipeline.
 
 ### Where are the reference solutions?
 
@@ -351,7 +353,23 @@ No problem! All jobs automatically fall back to using **built-in sample data** a
 
 ## CI/CD Setup (For Module 07)
 
-To enable automatic deployment via GitHub Actions, add these secrets to your GitHub repo:
+CI (lint/test on every PR) works out of the box with no setup. CD (deploy on merge) is
+**manual** in this workshop — Cloudera doesn't offer a public download for the CDE CLI, so
+a GitHub-hosted runner can't install it, and this repo being public rules out hosting
+Cloudera's binary as a release asset. `cd.yml` runs on every merge to `main` but only
+prints a reminder; it does not deploy.
+
+**After merging to `main`, deploy yourself:**
+```bash
+./scripts/deploy_jobs.sh
+./scripts/deploy_dag.sh
+# or: make deploy
+```
+
+If you want true end-to-end automation, `modules/07-cicd/README.md` covers two options: a
+self-hosted GitHub Actions runner (on a machine with the CDE CLI already installed), or a
+private mirror repo for the CLI binary. The four secrets below are only needed for those
+paths, not for the default manual-deploy flow:
 
 **Settings → Secrets and variables → Actions → New repository secret**
 
@@ -363,8 +381,6 @@ To enable automatic deployment via GitHub Actions, add these secrets to your Git
 | `CDE_VC_ENDPOINT` | Your CDE virtual cluster endpoint URL |
 
 Your instructor will give you these values.
-
-Once set up: push to a branch → open a PR → tests run automatically. Merge to `main` → pipeline deploys to CDE automatically.
 
 ---
 

@@ -17,8 +17,10 @@ from pyspark.sql import SparkSession, DataFrame
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_RAW_PATH       = "s3a://go01-demo/workshop/raw"
-DEFAULT_VALIDATED_PATH = "s3a://go01-demo/workshop/validated"
+# DEFAULT_RAW_PATH       = "s3a://go01-demo/workshop/raw"        # old go01-dem environment bucket
+# DEFAULT_VALIDATED_PATH = "s3a://go01-demo/workshop/validated"  # old go01-dem environment bucket
+DEFAULT_RAW_PATH       = "s3a://federal-buk-574bcea0/workshop/raw"
+DEFAULT_VALIDATED_PATH = "s3a://federal-buk-574bcea0/workshop/validated"
 
 
 def _is_unset(val: str) -> bool:

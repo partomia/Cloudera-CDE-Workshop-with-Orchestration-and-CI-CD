@@ -4,41 +4,44 @@ on:
   push:
     branches: [main]
 
-env:
-  CDE_VC_ENDPOINT: ${{ secrets.CDE_VC_ENDPOINT }}
-
 jobs:
-  deploy:
-    name: Deploy Jobs & DAG to CDE
+  deploy-reminder:
+    name: Post-merge Deploy Reminder
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install CDE CLI
+      # Cloudera does not provide a public or programmatic download for the CDE CLI —
+      # it's an authenticated, per-virtual-cluster binary from CDP Console -> Data
+      # Engineering -> Cluster details -> CLI TOOL. That means GitHub-hosted runners
+      # can't install it, and this repo is public so we can't redistribute Cloudera's
+      # binary as a release asset either. Deployment is a manual step for now.
+      #
+      # To get full automation, either:
+      #   - register a self-hosted runner (on a machine with the CDE CLI installed) and
+      #     point this workflow's `runs-on` at it, or
+      #   - host the CLI binary in a private mirror repo/artifact store your org controls
+      #     and pull it here with a token.
+      - name: Manual deploy required
         run: |
-          curl -L "https://github.com/cloudera/cde-cli/releases/latest/download/cde-linux-amd64" \
-            -o /usr/local/bin/cde
-          chmod +x /usr/local/bin/cde
+          cat <<'EOF'
+          ============================================================
+          main branch updated — CDE deployment is a MANUAL step.
 
-      - name: Configure CDE CLI
-        run: |
-          cde configure \
-            --cdp-endpoint "${{ secrets.CDP_ENDPOINT }}" \
-            --cdp-access-key "${{ secrets.CDP_ACCESS_KEY }}" \
-            --cdp-private-key "${{ secrets.CDP_PRIVATE_KEY }}" \
-            --vcluster-endpoint "${CDE_VC_ENDPOINT}"
+          Cloudera does not offer a public download for the CDE CLI,
+          so GitHub-hosted runners cannot install it automatically.
 
-      - name: Deploy Spark jobs
-        run: |
-          chmod +x scripts/deploy_jobs.sh
-          ./scripts/deploy_jobs.sh
+          To deploy this change, run from a machine with the CDE CLI
+          installed and configured (~/.cde/config.yaml):
 
-      - name: Deploy Airflow DAG
-        run: |
-          chmod +x scripts/deploy_dag.sh
-          ./scripts/deploy_dag.sh
+            ./scripts/deploy_jobs.sh
+            ./scripts/deploy_dag.sh
 
-      - name: Notify success
-        if: success()
-        run: echo "Deployment to CDE completed successfully on $(date -u)"
+          or simply:
+
+            make deploy
+
+          See modules/07-cicd/README.md for details.
+          ============================================================
+          EOF
