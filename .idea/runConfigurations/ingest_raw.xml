@@ -1,0 +1,24 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration name="ingest_raw" type="PythonConfigurationType" factoryName="Python">
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="PYSPARK_PYTHON" value="$USER_HOME$/venvs/cde-spark/bin/python3.11" />
+      <env name="PYSPARK_DRIVER_PYTHON" value="$USER_HOME$/venvs/cde-spark/bin/python3.11" />
+    </envs>
+    <option name="SDK_HOME" value="$USER_HOME$/venvs/cde-spark/bin/python" />
+    <option name="SDK_NAME" value="Python 3.11 (cde-spark)" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/jobs/ingest" />
+    <option name="IS_MODULE_SDK" value="false" />
+    <option name="ADD_CONTENT_ROOTS" value="true" />
+    <option name="ADD_SOURCE_ROOTS" value="true" />
+    <module name="Spark-Workshop-Airflow-Git" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/jobs/ingest/ingest_raw.py" />
+    <option name="PARAMETERS" value="{{landing_path}} /tmp/workshop_test/raw" />
+    <option name="SHOW_COMMAND_LINE" value="false" />
+    <option name="EMULATE_TERMINAL" value="false" />
+    <option name="MODULE_MODE" value="false" />
+    <method v="2" />
+  </configuration>
+</component>
