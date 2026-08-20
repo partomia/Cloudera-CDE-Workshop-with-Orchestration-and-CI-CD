@@ -22,7 +22,7 @@ import great_expectations as gx
 from demos.sample_data import ORDERS, BAD_ORDERS, SCHEMA
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-CDE_SESSION_NAME = "r1rsingh"   # Change to your CDE session name
+CDE_SESSION_NAME = "cdecli"   # Change to your CDE session name
 GE_ROOT_DIR      = "great_expectations"
 
 

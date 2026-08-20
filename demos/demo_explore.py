@@ -18,7 +18,7 @@ from cde import CDESparkConnectSession
 from demos.sample_data import ORDERS, SCHEMA
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-CDE_SESSION_NAME = "r1rsingh"  # Change to your CDE session name
+CDE_SESSION_NAME = "cdecli"  # Change to your CDE session name
 
 
 def sep(title):
