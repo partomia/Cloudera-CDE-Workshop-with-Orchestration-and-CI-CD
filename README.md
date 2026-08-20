@@ -296,10 +296,13 @@ After deploying, go to the **CDE Airflow UI → DAGs** and you will see `retail_
 
 ### Running a single job from your laptop
 
-You don't have to deploy the whole pipeline to test one job. `scripts/run_cde_job.py` submits a single job to CDE and waits for it to finish — this does **not** run Spark locally, it just shells out to the CDE CLI:
+You don't have to deploy the whole pipeline to test one job. `scripts/run_cde_job.py` submits a single job to CDE and waits for it to finish — this does **not** run Spark locally, it just shells out to the CDE CLI. It works with any deployed job name, e.g.:
 
 ```bash
 python scripts/run_cde_job.py workshop-ingest-raw
+python scripts/run_cde_job.py workshop-validate-data
+python scripts/run_cde_job.py workshop-transform
+python scripts/run_cde_job.py workshop-load-curated
 ```
 
 You'll see output similar to:
